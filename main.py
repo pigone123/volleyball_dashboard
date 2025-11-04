@@ -31,7 +31,7 @@ if video_url:
 
 # Event logging section
 st.subheader("📋 Log New Event")
-t.subheader("בחר שחקן")
+st.subheader("בחר שחקן")
 players = ["אורי", "אופיר", "בני", "הלל", "שקד", "עומר סער", "עומר", "קארט", "ליאור", "יונתן", "עידו", "רועי"]
 
 if "selected_player" not in st.session_state:
