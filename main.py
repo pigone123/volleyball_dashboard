@@ -31,16 +31,35 @@ if video_url:
 
 # Event logging section
 st.subheader("📋 Log New Event")
-col1, col2, col3 = st.columns(3)
-with col1:
-    player = st.selectbox("שם שחקן", ["אורי", "אופיר", "בני", "הלל",  "שקד", "עומר סער", "עומר", "קארט", "ליאור", "יונתן", "עידו", "רועי" ])
-with col2:
-    event_type = st.selectbox("מהלך", ["הגשה", "התקפה", "חסימה", "קבלה", "dig", "מסירה"])
-with col3:
+t.subheader("בחר שחקן")
+players = ["אורי", "אופיר", "בני", "הלל", "שקד", "עומר סער", "עומר", "קארט", "ליאור", "יונתן", "עידו", "רועי"]
 
-    outcome = st.selectbox("Outcome", ["Success", "Fail", "Neutral"])
+if "selected_player" not in st.session_state:
+    st.session_state.selected_player = None
+
+cols = st.columns(4)  # how many buttons per row
+for i, name in enumerate(players):
+    if cols[i % 4].button(name):
+        st.session_state.selected_player = name
+
+player = st.session_state.get("selected_player")
+if player:
+    st.info(f"🎯 נבחר שחקן: {player}")
+else:
+    st.warning("אנא בחר שחקן")
+
+# --- Now only 2 columns for event + outcome ---
+col2, col3 = st.columns(2)
+
+with col2:
+    event_type = st.selectbox("מהלך", ["הגשה", "התקפה", "חסימה", "קבלה", "חפירה", "מסירה"])
+
+with col3:
+    # You can dynamically change the outcome options depending on the event
     if event_type == "הגשה":
-        outcome = st.selectbox("Outcome", ["bla", "test", "Neutral"])
+        outcome = st.selectbox("תוצאה", ["שגיאה", "אייס", "ביצוע רגיל"])
+    else:
+        outcome = st.selectbox("תוצאה", ["הצלחה", "כישלון", "ניטרלי"])
 
 video_time = st.text_input("Video Time (optional, e.g. 12:34)")
 
