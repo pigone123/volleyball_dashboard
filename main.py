@@ -2,9 +2,8 @@ import streamlit as st
 import sqlite3
 from datetime import datetime
 import pandas as pd
-import streamlit.components.v1 as components
 
-# ------------------ DATABASE ------------------
+# ---------------- DATABASE ----------------
 conn = sqlite3.connect("volleyball_events.db", check_same_thread=False)
 c = conn.cursor()
 c.execute("""
@@ -22,83 +21,54 @@ conn.commit()
 
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
-# ------------------ SESSION STATE ------------------
+# ---------------- SESSION STATE ----------------
 for key in ["selected_player", "selected_event", "selected_outcome"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
-# ------------------ VIDEO INPUT ------------------
+# ---------------- VIDEO INPUT ----------------
 video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.youtube.com/watch?v=example")
 if video_url:
     st.video(video_url)
 
-st.markdown("<div style='margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
 
-# ------------------ HTML BUTTON GRID ------------------
-def render_html_buttons(options, session_key, color):
-    """Render clickable HTML buttons via st.components.html"""
+# ---------------- HELPER FUNCTION ----------------
+def horizontal_radio(label, options, session_key):
     selected = st.session_state.get(session_key)
-    # Create HTML buttons
-    html_buttons = ""
-    for opt in options:
-        bg = color if opt == selected else "#F0F2F6"
-        fg = "white" if opt == selected else "black"
-        html_buttons += f"""
-        <div class="button" data-value="{opt}" style="
-            display:inline-block;
-            margin:2px;
-            padding:6px 12px;
-            border-radius:6px;
-            background-color:{bg};
-            color:{fg};
-            font-weight:bold;
-            cursor:pointer;
-            user-select:none;
-        ">{opt}</div>
-        """
-    # Wrap in container
-    html_code = f"""
-    <div id="{session_key}_container">{html_buttons}</div>
-    <script>
-    const container = document.getElementById('{session_key}_container');
-    const buttons = container.querySelectorAll('.button');
-    buttons.forEach(btn => {{
-        btn.onclick = () => {{
-            const value = btn.getAttribute('data-value');
-            // Send selected value back to Streamlit
-            window.parent.postMessage({{isStreamlitMessage:true, type:'SET_SESSION_STATE', key:'{session_key}', value:value}}, '*');
-        }}
-    }});
-    </script>
-    """
-    # Render HTML
-    components.html(html_code, height=50)
+    value = st.radio(
+        label,
+        options,
+        index=options.index(selected) if selected in options else 0,
+        horizontal=True
+    )
+    st.session_state[session_key] = value
+    return value
 
-# ------------------ PLAYER SELECTION ------------------
+# ---------------- PLAYER SELECTION ----------------
 st.markdown("### 🏐 Select Player")
-players = ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"]
-render_html_buttons(players, "selected_player", "#4CAF50")
+player = horizontal_radio("", ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"], "selected_player")
 
-# ------------------ EVENT SELECTION ------------------
+# ---------------- EVENT SELECTION ----------------
 st.markdown("### ⚡ Select Event")
-events = ["Serve","Attack","Block","Receive","Dig","Set","Error"]
-render_html_buttons(events, "selected_event", "#2196F3")
+event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set","Error"], "selected_event")
 
-# ------------------ OUTCOME SELECTION ------------------
+# ---------------- OUTCOME SELECTION ----------------
 st.markdown("### 🎯 Select Outcome")
-event_selected = st.session_state.get("selected_event")
-if event_selected == "Serve":
-    outcomes = ["Ace","Error","Normal"]
-elif event_selected in events:
-    outcomes = ["Success","Fail","Neutral"]
+if event == "Serve":
+    outcome_options = ["Ace","Error","Normal"]
+elif event in ["Attack","Block","Receive","Dig","Set","Error"]:
+    outcome_options = ["Success","Fail","Neutral"]
 else:
-    outcomes = []
+    outcome_options = []
 
-if outcomes:
-    render_html_buttons(outcomes, "selected_outcome", "#FF9800")
+if outcome_options:
+    outcome = horizontal_radio("", outcome_options, "selected_outcome")
+else:
+    outcome = None
 
-# ------------------ SAVE BUTTON ------------------
-st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
+# ---------------- SAVE EVENT ----------------
+st.markdown("<div style='margin-top:0.5rem; margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
 if st.button("💾 Save Event", use_container_width=True):
     p = st.session_state.get("selected_player")
     e = st.session_state.get("selected_event")
@@ -117,7 +87,7 @@ if st.button("💾 Save Event", use_container_width=True):
     else:
         st.error("Please select a player, event, and outcome before saving.")
 
-# ------------------ LOGGED EVENTS ------------------
+# ---------------- LOGGED EVENTS ----------------
 st.markdown("<hr style='margin-top:0.2rem;margin-bottom:0.2rem'>", unsafe_allow_html=True)
 st.markdown("### 📊 Logged Events")
 df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
