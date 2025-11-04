@@ -32,36 +32,33 @@ video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.you
 if video_url:
     st.video(video_url)
 
-# Small spacing
 st.markdown("<div style='margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 
 # ------------------ HELPER FUNCTION ------------------
-def button_row(options, session_key, color):
-    """Display a row of buttons; update session state; highlight selected"""
+def highlight_buttons(options, session_key, color):
+    """Render buttons with proper highlighting using session_state"""
     cols = st.columns(len(options), gap="small")
     for i, option in enumerate(options):
-        # Check if this option is currently selected
         selected = st.session_state[session_key] == option
-        # Button color
-        bg = color if selected else "#F0F2F6"
-        fg = "white" if selected else "black"
-        if cols[i].button(option, key=f"{session_key}_{i}", use_container_width=True):
+        # Render button
+        if cols[i].button(option):
             st.session_state[session_key] = option
-        # Apply inline style directly on the button
-        cols[i].markdown(
-            f"<style>div.stButton>button:nth-child(1){{background-color:{bg};color:{fg};border-radius:6px;padding:0.3em 0.5em;font-size:0.85rem;}}</style>",
-            unsafe_allow_html=True
-        )
+        # Highlight button using markdown with HTML
+        if selected:
+            cols[i].markdown(
+                f"<div style='background-color:{color};color:white;border-radius:6px;text-align:center;padding:0.3em 0.5em;font-size:0.85rem;'>{option}</div>",
+                unsafe_allow_html=True
+            )
 
 # ------------------ PLAYER SELECTION ------------------
 st.markdown("### 🏐 Select Player")
 players = ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"]
-button_row(players, "selected_player", "#4CAF50")
+highlight_buttons(players, "selected_player", "#4CAF50")
 
 # ------------------ EVENT SELECTION ------------------
 st.markdown("### ⚡ Select Event")
 events = ["Serve","Attack","Block","Receive","Dig","Set","Error"]
-button_row(events, "selected_event", "#2196F3")
+highlight_buttons(events, "selected_event", "#2196F3")
 
 # ------------------ OUTCOME SELECTION ------------------
 st.markdown("### 🎯 Select Outcome")
@@ -69,7 +66,7 @@ if st.session_state.selected_event == "Serve":
     outcomes = ["Ace","Error","Normal"]
 else:
     outcomes = ["Success","Fail","Neutral"]
-button_row(outcomes, "selected_outcome", "#FF9800")
+highlight_buttons(outcomes, "selected_outcome", "#FF9800")
 
 # ------------------ SAVE BUTTON ------------------
 st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
@@ -84,7 +81,7 @@ if st.button("💾 Save Event", use_container_width=True):
         )
         conn.commit()
         st.success(f"Saved: {p} | {e} | {o}")
-        # Reset for next event
+        # Reset selections
         st.session_state.selected_player = None
         st.session_state.selected_event = None
         st.session_state.selected_outcome = None
