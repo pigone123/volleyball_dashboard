@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS events (
 """)
 conn.commit()
 
-# ------------------ STREAMLIT CONFIG ------------------
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
 # ------------------ SESSION STATE ------------------
@@ -34,43 +33,25 @@ if video_url:
 
 st.markdown("<div style='margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 
-# ------------------ HELPER FUNCTION ------------------
-def button_row(options, session_key, color):
-    cols = st.columns(len(options), gap="small")
-    for i, option in enumerate(options):
-        # Determine if this option is selected
-        selected = st.session_state[session_key] == option
-        # Set button style
-        bg_color = color if selected else "#F0F2F6"
-        fg_color = "white" if selected else "black"
-        # Render button
-        if cols[i].button(option, key=f"{session_key}_{option}", use_container_width=True):
-            st.session_state[session_key] = option
-        # Inline CSS styling directly per key
-        cols[i].markdown(
-            f"""
-            <style>
-            div.stButton > button[key="{session_key}_{option}"] {{
-                background-color: {bg_color} !important;
-                color: {fg_color} !important;
-                border-radius:6px;
-                padding:0.3em 0.5em;
-                font-size:0.85rem;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
 # ------------------ PLAYER SELECTION ------------------
 st.markdown("### 🏐 Select Player")
 players = ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"]
-button_row(players, "selected_player", "#4CAF50")
+st.session_state.selected_player = st.radio(
+    "",
+    players,
+    index=players.index(st.session_state.selected_player) if st.session_state.selected_player else 0,
+    horizontal=True
+)
 
 # ------------------ EVENT SELECTION ------------------
 st.markdown("### ⚡ Select Event")
 events = ["Serve","Attack","Block","Receive","Dig","Set","Error"]
-button_row(events, "selected_event", "#2196F3")
+st.session_state.selected_event = st.radio(
+    "",
+    events,
+    index=events.index(st.session_state.selected_event) if st.session_state.selected_event else 0,
+    horizontal=True
+)
 
 # ------------------ OUTCOME SELECTION ------------------
 st.markdown("### 🎯 Select Outcome")
@@ -78,7 +59,12 @@ if st.session_state.selected_event == "Serve":
     outcomes = ["Ace","Error","Normal"]
 else:
     outcomes = ["Success","Fail","Neutral"]
-button_row(outcomes, "selected_outcome", "#FF9800")
+st.session_state.selected_outcome = st.radio(
+    "",
+    outcomes,
+    index=outcomes.index(st.session_state.selected_outcome) if st.session_state.selected_outcome else 0,
+    horizontal=True
+)
 
 # ------------------ SAVE BUTTON ------------------
 st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
@@ -100,7 +86,7 @@ if st.button("💾 Save Event", use_container_width=True):
     else:
         st.error("Please select a player, event, and outcome before saving.")
 
-# ------------------ DISPLAY SAVED EVENTS ------------------
+# ------------------ LOGGED EVENTS ------------------
 st.markdown("<hr style='margin-top:0.2rem;margin-bottom:0.2rem'>", unsafe_allow_html=True)
 st.markdown("### 📊 Logged Events")
 df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
