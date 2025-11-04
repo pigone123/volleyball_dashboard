@@ -22,15 +22,31 @@ conn.commit()
 # ------------------ STREAMLIT UI ------------------
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
+# ---------- STYLE: compact layout ----------
+st.markdown("""
+<style>
+    section[data-testid="stSidebar"] {width: 250px !important;}
+    div.block-container {padding-top: 1rem; padding-bottom: 0.5rem; padding-left: 2rem; padding-right: 2rem;}
+    h1, h2, h3 {margin-bottom: 0.3rem;}
+    div[data-testid="stHorizontalBlock"] {gap: 0.25rem !important;}
+    div.stButton > button {
+        margin: 1px 2px !important;
+        border-radius: 8px;
+        padding: 0.3em 0.6em;
+        font-size: 0.9rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------ HEADER ------------------
 st.title("🏐 Volleyball Event Dashboard")
 
-# Input: YouTube video
-video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.youtube.com/watch?v=example")
+# ------------------ VIDEO INPUT ------------------
+video_url = st.text_input("🎥 כתובת וידאו מיוטיוב", placeholder="https://www.youtube.com/watch?v=example")
 if video_url:
     st.video(video_url)
 
-# Event logging section
-st.set_page_config(layout="wide")
+st.markdown("---")
 
 # ---------- SESSION STATE ----------
 if "selected_player" not in st.session_state:
@@ -40,114 +56,53 @@ if "selected_event" not in st.session_state:
 if "selected_outcome" not in st.session_state:
     st.session_state.selected_outcome = None
 
-# ---------- STYLE: tighter spacing ----------
-st.markdown("""
-<style>
-    div[data-testid="stHorizontalBlock"] {
-        gap: 0.3rem !important;  /* reduce column gap */
-    }
-    div.stButton>button {
-        margin: 1px 2px !important;  /* reduce vertical & horizontal margin */
-        border-radius: 10px;
-        padding: 0.3em 0.8em;
-    }
-</style>
-""", unsafe_allow_html=True)
+# ---------- HELPER FUNCTION ----------
+def button_group(options, key_prefix, color, selected_value):
+    """Display a compact horizontal row of selectable buttons"""
+    cols = st.columns(len(options), gap="small")
+    new_selection = selected_value
+    for i, name in enumerate(options):
+        is_selected = (name == selected_value)
+        style = f"background-color:{color};color:white;" if is_selected else "background-color:#F0F2F6;color:black;"
+        with cols[i]:
+            if st.button(name, key=f"{key_prefix}_{i}", use_container_width=True):
+                new_selection = name
+        st.markdown(
+            f"<style>div[data-testid='column']:has(> div button#{key_prefix}_{i}) button{{{style}}}</style>",
+            unsafe_allow_html=True
+        )
+    return new_selection
 
 # ---------- PLAYER SELECTION ----------
-st.subheader("🏐 בחר שחקן")
-
+st.markdown("#### 🏐 בחר שחקן")
 players = ["אורי", "אופיר", "בני", "הלל", "שקד", "עומר סער", "עומר", "קארט", "ליאור", "יונתן", "עידו", "רועי"]
-
-cols_players = st.columns(len(players), gap="small")
-
-for i, name in enumerate(players):
-    selected = st.session_state.selected_player == name
-    if cols_players[i].button(name, key=f"player_{i}"):
-        st.session_state.selected_player = name
-
-    st.markdown(f"""
-        <style>
-        div[data-testid="stHorizontalBlock"] div:nth-child({i+1}) button {{
-            background-color: {'#4CAF50' if selected else '#F0F2F6'};
-            color: {'white' if selected else 'black'};
-        }}
-        </style>
-    """, unsafe_allow_html=True)
-
-player = st.session_state.selected_player
-if player:
-    st.info(f"🎯 נבחר שחקן: {player}")
-else:
-    st.warning("אנא בחר שחקן")
+st.session_state.selected_player = button_group(players, "player", "#4CAF50", st.session_state.selected_player)
 
 # ---------- EVENT SELECTION ----------
-st.subheader("⚡ בחר מהלך")
-
+st.markdown("#### ⚡ בחר מהלך")
 events = ["הגשה", "התקפה", "חסימה", "קבלה", "חפירה", "מסירה", "שגיאה"]
-
-cols_events = st.columns(len(events), gap="small")
-
-for i, e in enumerate(events):
-    selected = st.session_state.selected_event == e
-    if cols_events[i].button(e, key=f"event_{i}"):
-        st.session_state.selected_event = e
-
-    st.markdown(f"""
-        <style>
-        div[data-testid="stHorizontalBlock"] div:nth-child({i+1}) button {{
-            background-color: {'#2196F3' if selected else '#F0F2F6'};
-            color: {'white' if selected else 'black'};
-        }}
-        </style>
-    """, unsafe_allow_html=True)
-
-event_type = st.session_state.selected_event
-if event_type:
-    st.info(f"⚙️ נבחר מהלך: {event_type}")
-else:
-    st.warning("אנא בחר מהלך")
+st.session_state.selected_event = button_group(events, "event", "#2196F3", st.session_state.selected_event)
 
 # ---------- OUTCOME SELECTION ----------
-st.subheader("🎯 בחר תוצאה")
-
-if event_type == "הגשה":
+st.markdown("#### 🎯 בחר תוצאה")
+if st.session_state.selected_event == "הגשה":
     outcomes = ["אייס", "שגיאה", "ביצוע רגיל"]
 else:
     outcomes = ["הצלחה", "כישלון", "ניטרלי"]
-
-cols_outcomes = st.columns(len(outcomes), gap="small")
-
-for i, outcome_name in enumerate(outcomes):
-    selected = st.session_state.selected_outcome == outcome_name
-    if cols_outcomes[i].button(outcome_name, key=f"outcome_{i}"):
-        st.session_state.selected_outcome = outcome_name
-
-    st.markdown(f"""
-        <style>
-        div[data-testid="stHorizontalBlock"] div:nth-child({i+1}) button {{
-            background-color: {'#FF9800' if selected else '#F0F2F6'};
-            color: {'white' if selected else 'black'};
-        }}
-        </style>
-    """, unsafe_allow_html=True)
-
-outcome = st.session_state.selected_outcome
-if outcome:
-    st.info(f"✅ נבחרה תוצאה: {outcome}")
-else:
-    st.warning("אנא בחר תוצאה")
+st.session_state.selected_outcome = button_group(outcomes, "outcome", "#FF9800", st.session_state.selected_outcome)
 
 # ---------- SAVE BUTTON ----------
-st.markdown("---")
-if st.button("💾 שמור מהלך"):
-    if player and event_type and outcome:
-        st.success(f"נשמר: {player} | {event_type} | {outcome}")
-
-        # Here you can insert into your database
-        # save_to_db(player, event_type, outcome)
-
-        # Reset selections for next event
+st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
+if st.button("💾 שמור מהלך", use_container_width=True):
+    p, e, o = st.session_state.selected_player, st.session_state.selected_event, st.session_state.selected_outcome
+    if p and e and o:
+        c.execute(
+            "INSERT INTO events (timestamp, player, event, outcome, video_url) VALUES (?, ?, ?, ?, ?)",
+            (datetime.now().isoformat(), p, e, o, video_url)
+        )
+        conn.commit()
+        st.success(f"נשמר: {p} | {e} | {o}")
+        # reset for next entry
         st.session_state.selected_player = None
         st.session_state.selected_event = None
         st.session_state.selected_outcome = None
@@ -155,45 +110,27 @@ if st.button("💾 שמור מהלך"):
     else:
         st.error("אנא בחר שחקן, מהלך ותוצאה לפני שמירה")
 
+st.markdown("---")
 
-player = st.session_state.selected_player
-event_type = st.session_state.selected_event
-outcome = st.session_state.selected_outcome
-
-if st.button("Save Event"):
-    if not player:
-        st.warning("Please enter the player's name.")
-    else:
-        c.execute(
-            "INSERT INTO events (timestamp, player, event, outcome, video_url) VALUES (?, ?, ?, ?, ?)",
-            (datetime.now().isoformat(), player, event_type, outcome, video_url)
-        )
-        conn.commit()
-        st.success(f"Event saved for {player} ✅")
-
-# ------------------ DISPLAY SAVED DATA ------------------
-st.subheader("📊 Logged Events")
-
+# ---------- DISPLAY SAVED DATA ----------
+st.markdown("#### 📊 מהלכים שנשמרו")
 df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
 
-if len(df) > 0:
-    # Filter bar
-    with st.expander("🔍 Filters"):
-        selected_player = st.multiselect("Filter by Player", df["player"].unique())
-        selected_event = st.multiselect("Filter by Event Type", df["event"].unique())
-
-        if selected_player:
-            df = df[df["player"].isin(selected_player)]
-        if selected_event:
-            df = df[df["event"].isin(selected_event)]
+if not df.empty:
+    with st.expander("🔍 סינון"):
+        sel_player = st.multiselect("שחקן", df["player"].unique())
+        sel_event = st.multiselect("מהלך", df["event"].unique())
+        if sel_player:
+            df = df[df["player"].isin(sel_player)]
+        if sel_event:
+            df = df[df["event"].isin(sel_event)]
 
     st.dataframe(df, use_container_width=True)
-
     st.download_button(
-        "⬇️ Download CSV",
+        "⬇️ הורד כ-CSV",
         data=df.to_csv(index=False).encode("utf-8"),
         file_name="volleyball_events.csv",
         mime="text/csv"
     )
 else:
-    st.info("No events logged yet.")
+    st.info("אין מהלכים שמורים עדיין.")
