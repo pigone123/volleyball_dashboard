@@ -51,7 +51,7 @@ player = horizontal_radio("", ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar"
 
 # ---------------- EVENT SELECTION ----------------
 st.markdown("### ⚡ Select Event")
-event = horizontal_radio("", ["Serve","Free Ball","Block","Receive","Dig","Set"], "selected_event")
+event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set"], "selected_event")
 
 # ---------------- OUTCOME SELECTION ----------------
 attack_type = None
