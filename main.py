@@ -33,45 +33,63 @@ if video_url:
 
 st.markdown("<div style='margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 
+# ------------------ BUTTON GRID FUNCTION ------------------
+def button_grid(options, session_key, color):
+    cols = st.columns(len(options), gap="small")
+    for i, option in enumerate(options):
+        selected = st.session_state.get(session_key) == option
+        bg_color = color if selected else "#F0F2F6"
+        fg_color = "white" if selected else "black"
+
+        # Use markdown div to mimic a button
+        if cols[i].button(option, key=f"{session_key}_{option}"):
+            st.session_state[session_key] = option
+
+        cols[i].markdown(
+            f"""
+            <style>
+            div.stButton>button[key="{session_key}_{option}"] {{
+                background-color: {bg_color} !important;
+                color: {fg_color} !important;
+                border-radius:6px;
+                padding:0.3em 0.6em;
+                font-size:0.85rem;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
 # ------------------ PLAYER SELECTION ------------------
 st.markdown("### 🏐 Select Player")
 players = ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"]
-st.session_state.selected_player = st.radio(
-    "",
-    players,
-    index=players.index(st.session_state.selected_player) if st.session_state.selected_player else 0,
-    horizontal=True
-)
+button_grid(players, "selected_player", "#4CAF50")
 
 # ------------------ EVENT SELECTION ------------------
 st.markdown("### ⚡ Select Event")
 events = ["Serve","Attack","Block","Receive","Dig","Set","Error"]
-st.session_state.selected_event = st.radio(
-    "",
-    events,
-    index=events.index(st.session_state.selected_event) if st.session_state.selected_event else 0,
-    horizontal=True
-)
+button_grid(events, "selected_event", "#2196F3")
 
 # ------------------ OUTCOME SELECTION ------------------
 st.markdown("### 🎯 Select Outcome")
-if st.session_state.selected_event == "Serve":
+event_selected = st.session_state.get("selected_event")
+if event_selected == "Serve":
     outcomes = ["Ace","Error","Normal"]
-else:
+elif event_selected in events:
     outcomes = ["Success","Fail","Neutral"]
-st.session_state.selected_outcome = st.radio(
-    "",
-    outcomes,
-    index=outcomes.index(st.session_state.selected_outcome) if st.session_state.selected_outcome else 0,
-    horizontal=True
-)
+else:
+    outcomes = []
+
+# Only display if event is selected
+if outcomes:
+    button_grid(outcomes, "selected_outcome", "#FF9800")
 
 # ------------------ SAVE BUTTON ------------------
 st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 if st.button("💾 Save Event", use_container_width=True):
-    p = st.session_state.selected_player
-    e = st.session_state.selected_event
-    o = st.session_state.selected_outcome
+    p = st.session_state.get("selected_player")
+    e = st.session_state.get("selected_event")
+    o = st.session_state.get("selected_outcome")
     if p and e and o:
         c.execute(
             "INSERT INTO events (timestamp, player, event, outcome, video_url) VALUES (?, ?, ?, ?, ?)",
@@ -79,9 +97,9 @@ if st.button("💾 Save Event", use_container_width=True):
         )
         conn.commit()
         st.success(f"Saved: {p} | {e} | {o}")
-        st.session_state.selected_player = None
-        st.session_state.selected_event = None
-        st.session_state.selected_outcome = None
+        st.session_state["selected_player"] = None
+        st.session_state["selected_event"] = None
+        st.session_state["selected_outcome"] = None
         st.rerun()
     else:
         st.error("Please select a player, event, and outcome before saving.")
