@@ -72,8 +72,8 @@ if event == "Serve":
 if event == "Serve":
     outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
 
-elif event in ["Attack","Block","Receive","Dig","Set","Error"]:
-    outcome_options = ["Success","Fail","Neutral"]
+# elif event in ["Attack","Block","Receive","Dig","Set","Error"]:
+#     outcome_options = ["Success","Fail","Neutral"]
 else:
     outcome_options = []
 
