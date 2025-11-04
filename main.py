@@ -28,7 +28,7 @@ for key in ["selected_player", "selected_event", "selected_outcome"]:
         st.session_state[key] = None
 
 # ------------------ VIDEO INPUT ------------------
-video_url = st.text_input("🎥 כתובת וידאו מיוטיוב", placeholder="https://www.youtube.com/watch?v=example")
+video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.youtube.com/watch?v=example")
 if video_url:
     st.video(video_url)
 
@@ -54,26 +54,26 @@ def button_row(options, session_key, color):
         )
 
 # ------------------ PLAYER SELECTION ------------------
-st.markdown("### 🏐 בחר שחקן")
-players = ["אורי","אופיר","בני","הלל","שקד","עומר סער","עומר","קארט","ליאור","יונתן","עידו","רועי"]
+st.markdown("### 🏐 Select Player")
+players = ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"]
 button_row(players, "selected_player", "#4CAF50")
 
 # ------------------ EVENT SELECTION ------------------
-st.markdown("### ⚡ בחר מהלך")
-events = ["הגשה","התקפה","חסימה","קבלה","חפירה","מסירה","שגיאה"]
+st.markdown("### ⚡ Select Event")
+events = ["Serve","Attack","Block","Receive","Dig","Set","Error"]
 button_row(events, "selected_event", "#2196F3")
 
 # ------------------ OUTCOME SELECTION ------------------
-st.markdown("### 🎯 בחר תוצאה")
-if st.session_state.selected_event == "הגשה":
-    outcomes = ["אייס","שגיאה","ביצוע רגיל"]
+st.markdown("### 🎯 Select Outcome")
+if st.session_state.selected_event == "Serve":
+    outcomes = ["Ace","Error","Normal"]
 else:
-    outcomes = ["הצלחה","כישלון","ניטרלי"]
+    outcomes = ["Success","Fail","Neutral"]
 button_row(outcomes, "selected_outcome", "#FF9800")
 
 # ------------------ SAVE BUTTON ------------------
 st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
-if st.button("💾 שמור מהלך", use_container_width=True):
+if st.button("💾 Save Event", use_container_width=True):
     p = st.session_state.selected_player
     e = st.session_state.selected_event
     o = st.session_state.selected_outcome
@@ -83,28 +83,28 @@ if st.button("💾 שמור מהלך", use_container_width=True):
             (datetime.now().isoformat(), p, e, o, video_url)
         )
         conn.commit()
-        st.success(f"נשמר: {p} | {e} | {o}")
+        st.success(f"Saved: {p} | {e} | {o}")
         # Reset for next event
         st.session_state.selected_player = None
         st.session_state.selected_event = None
         st.session_state.selected_outcome = None
         st.rerun()
     else:
-        st.error("אנא בחר שחקן, מהלך ותוצאה לפני שמירה")
+        st.error("Please select a player, event, and outcome before saving.")
 
 # ------------------ DISPLAY SAVED EVENTS ------------------
 st.markdown("<hr style='margin-top:0.2rem;margin-bottom:0.2rem'>", unsafe_allow_html=True)
-st.markdown("### 📊 מהלכים שנשמרו")
+st.markdown("### 📊 Logged Events")
 df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
 if not df.empty:
-    with st.expander("🔍 סינון"):
-        sel_player = st.multiselect("שחקן", df["player"].unique())
-        sel_event = st.multiselect("מהלך", df["event"].unique())
+    with st.expander("🔍 Filter"):
+        sel_player = st.multiselect("Player", df["player"].unique())
+        sel_event = st.multiselect("Event", df["event"].unique())
         if sel_player:
             df = df[df["player"].isin(sel_player)]
         if sel_event:
             df = df[df["event"].isin(sel_event)]
     st.dataframe(df, use_container_width=True)
-    st.download_button("⬇️ הורד כ-CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
+    st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
 else:
-    st.info("אין מהלכים שמורים עדיין.")
+    st.info("No events logged yet.")
