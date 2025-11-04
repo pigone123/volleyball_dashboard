@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS events (
 """)
 conn.commit()
 
-# ------------------ STREAMLIT CONFIG ------------------
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
 # ------------------ SESSION STATE ------------------
@@ -34,41 +33,60 @@ if video_url:
 
 st.markdown("<div style='margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 
-# ------------------ HELPER FUNCTION ------------------
-def highlight_buttons(options, session_key, color):
-    """Render buttons with proper highlighting using session_state"""
+# ------------------ CLICKABLE BUTTONS ------------------
+def clickable_buttons(options, session_key, color):
     cols = st.columns(len(options), gap="small")
     for i, option in enumerate(options):
         selected = st.session_state[session_key] == option
-        # Render button
-        if cols[i].button(option):
-            st.session_state[session_key] = option
-        # Highlight button using markdown with HTML
-        if selected:
-            cols[i].markdown(
-                f"<div style='background-color:{color};color:white;border-radius:6px;text-align:center;padding:0.3em 0.5em;font-size:0.85rem;'>{option}</div>",
-                unsafe_allow_html=True
-            )
+        bg_color = color if selected else "#F0F2F6"
+        fg_color = "white" if selected else "black"
 
-# ------------------ PLAYER SELECTION ------------------
+        # Wrap in form so each button is independent
+        with cols[i]:
+            with st.form(key=f"{session_key}_form_{i}", clear_on_submit=False):
+                submitted = st.form_submit_button(
+                    option,
+                    help=f"Select {option}",
+                    use_container_width=True
+                )
+                if submitted:
+                    st.session_state[session_key] = option
+
+                # Apply color and style
+                st.markdown(
+                    f"""
+                    <style>
+                    div.stButton>button:first-child {{
+                        background-color: {bg_color};
+                        color: {fg_color};
+                        border-radius:6px;
+                        padding:0.3em 0.5em;
+                        font-size:0.85rem;
+                    }}
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+# ------------------ PLAYER ------------------
 st.markdown("### 🏐 Select Player")
 players = ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"]
-highlight_buttons(players, "selected_player", "#4CAF50")
+clickable_buttons(players, "selected_player", "#4CAF50")
 
-# ------------------ EVENT SELECTION ------------------
+# ------------------ EVENT ------------------
 st.markdown("### ⚡ Select Event")
 events = ["Serve","Attack","Block","Receive","Dig","Set","Error"]
-highlight_buttons(events, "selected_event", "#2196F3")
+clickable_buttons(events, "selected_event", "#2196F3")
 
-# ------------------ OUTCOME SELECTION ------------------
+# ------------------ OUTCOME ------------------
 st.markdown("### 🎯 Select Outcome")
 if st.session_state.selected_event == "Serve":
     outcomes = ["Ace","Error","Normal"]
 else:
     outcomes = ["Success","Fail","Neutral"]
-highlight_buttons(outcomes, "selected_outcome", "#FF9800")
+clickable_buttons(outcomes, "selected_outcome", "#FF9800")
 
-# ------------------ SAVE BUTTON ------------------
+# ------------------ SAVE ------------------
 st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 if st.button("💾 Save Event", use_container_width=True):
     p = st.session_state.selected_player
@@ -81,7 +99,6 @@ if st.button("💾 Save Event", use_container_width=True):
         )
         conn.commit()
         st.success(f"Saved: {p} | {e} | {o}")
-        # Reset selections
         st.session_state.selected_player = None
         st.session_state.selected_event = None
         st.session_state.selected_outcome = None
@@ -89,7 +106,7 @@ if st.button("💾 Save Event", use_container_width=True):
     else:
         st.error("Please select a player, event, and outcome before saving.")
 
-# ------------------ DISPLAY SAVED EVENTS ------------------
+# ------------------ LOGGED EVENTS ------------------
 st.markdown("<hr style='margin-top:0.2rem;margin-bottom:0.2rem'>", unsafe_allow_html=True)
 st.markdown("### 📊 Logged Events")
 df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
