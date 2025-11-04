@@ -23,46 +23,48 @@ conn.commit()
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
 # ------------------ SESSION STATE ------------------
-if "selected_player" not in st.session_state:
-    st.session_state.selected_player = None
-if "selected_event" not in st.session_state:
-    st.session_state.selected_event = None
-if "selected_outcome" not in st.session_state:
-    st.session_state.selected_outcome = None
+for key in ["selected_player", "selected_event", "selected_outcome"]:
+    if key not in st.session_state:
+        st.session_state[key] = None
 
 # ------------------ VIDEO INPUT ------------------
 video_url = st.text_input("🎥 כתובת וידאו מיוטיוב", placeholder="https://www.youtube.com/watch?v=example")
 if video_url:
     st.video(video_url)
 
-st.markdown("<br>", unsafe_allow_html=True)  # small spacing
+# Small spacing
+st.markdown("<div style='margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 
-# ------------------ BUTTON GROUP HELPER ------------------
+# ------------------ HELPER FUNCTION ------------------
 def button_row(options, session_key, color):
+    """Display a row of buttons; update session state; highlight selected"""
     cols = st.columns(len(options), gap="small")
     for i, option in enumerate(options):
-        is_selected = (st.session_state[session_key] == option)
-        button_color = f"background-color:{color};color:white" if is_selected else "background-color:#F0F2F6;color:black"
-        if cols[i].button(option, key=f"{session_key}_{i}"):
+        # Check if this option is currently selected
+        selected = st.session_state[session_key] == option
+        # Button color
+        bg = color if selected else "#F0F2F6"
+        fg = "white" if selected else "black"
+        if cols[i].button(option, key=f"{session_key}_{i}", use_container_width=True):
             st.session_state[session_key] = option
-        # Apply color inline (works reliably)
+        # Apply inline style directly on the button
         cols[i].markdown(
-            f"<style>div.stButton>button:nth-child(1){{{button_color};border-radius:8px;padding:0.3em 0.6em;font-size:0.9rem;}}</style>",
+            f"<style>div.stButton>button:nth-child(1){{background-color:{bg};color:{fg};border-radius:6px;padding:0.3em 0.5em;font-size:0.85rem;}}</style>",
             unsafe_allow_html=True
         )
 
 # ------------------ PLAYER SELECTION ------------------
-st.markdown("#### 🏐 בחר שחקן")
+st.markdown("### 🏐 בחר שחקן")
 players = ["אורי","אופיר","בני","הלל","שקד","עומר סער","עומר","קארט","ליאור","יונתן","עידו","רועי"]
 button_row(players, "selected_player", "#4CAF50")
 
 # ------------------ EVENT SELECTION ------------------
-st.markdown("#### ⚡ בחר מהלך")
+st.markdown("### ⚡ בחר מהלך")
 events = ["הגשה","התקפה","חסימה","קבלה","חפירה","מסירה","שגיאה"]
 button_row(events, "selected_event", "#2196F3")
 
 # ------------------ OUTCOME SELECTION ------------------
-st.markdown("#### 🎯 בחר תוצאה")
+st.markdown("### 🎯 בחר תוצאה")
 if st.session_state.selected_event == "הגשה":
     outcomes = ["אייס","שגיאה","ביצוע רגיל"]
 else:
@@ -70,7 +72,7 @@ else:
 button_row(outcomes, "selected_outcome", "#FF9800")
 
 # ------------------ SAVE BUTTON ------------------
-st.markdown("<br>", unsafe_allow_html=True)  # small spacing
+st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 if st.button("💾 שמור מהלך", use_container_width=True):
     p = st.session_state.selected_player
     e = st.session_state.selected_event
@@ -82,7 +84,7 @@ if st.button("💾 שמור מהלך", use_container_width=True):
         )
         conn.commit()
         st.success(f"נשמר: {p} | {e} | {o}")
-        # reset selections
+        # Reset for next event
         st.session_state.selected_player = None
         st.session_state.selected_event = None
         st.session_state.selected_outcome = None
@@ -91,8 +93,8 @@ if st.button("💾 שמור מהלך", use_container_width=True):
         st.error("אנא בחר שחקן, מהלך ותוצאה לפני שמירה")
 
 # ------------------ DISPLAY SAVED EVENTS ------------------
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("#### 📊 מהלכים שנשמרו")
+st.markdown("<hr style='margin-top:0.2rem;margin-bottom:0.2rem'>", unsafe_allow_html=True)
+st.markdown("### 📊 מהלכים שנשמרו")
 df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
 if not df.empty:
     with st.expander("🔍 סינון"):
