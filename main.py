@@ -93,7 +93,7 @@ if st.button("💾 Save Event", use_container_width=True):
     if p and e and o:
         c.execute(
             "INSERT INTO events (player, event, outcome, video_url) VALUES (?, ?, ?, ?)",
-            (datetime.now().isoformat(), p, f"{e} ({a_type})" if a_type else e, o, video_url)
+            (p, f"{e} ({a_type})" if a_type else e, o, video_url)
         )
         conn.commit()
         st.success(f"Saved: {p} | {e} | {a_type if a_type else ''} | {o}")
