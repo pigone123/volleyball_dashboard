@@ -127,20 +127,21 @@ else:
 st.markdown("---")
 st.markdown("### ⚠️ Danger Zone")
 
-if st.button("🗑️ Clear All Events", use_container_width=True):
-    # Ask for confirmation
-    confirm = st.checkbox("Are you sure you want to delete all events?", key="confirm_clear")
-    if confirm:
-        # Make a fresh connection to ensure changes are committed
+# Show confirmation checkbox first
+confirm_clear = st.checkbox("Are you sure you want to delete all events?", key="confirm_clear")
+
+if confirm_clear:
+    if st.button("🗑️ Clear All Events", use_container_width=True):
+        # Use a fresh connection to clear database
         with sqlite3.connect("volleyball_events.db") as conn_clear:
             c_clear = conn_clear.cursor()
             c_clear.execute("DELETE FROM events")
             conn_clear.commit()
         st.success("✅ All events have been cleared!")
-        
+
         # Reset session state
         for key in ["selected_player", "selected_event", "selected_outcome", "attack_type"]:
             if key in st.session_state:
                 st.session_state[key] = None
-        
+
         st.experimental_rerun()
