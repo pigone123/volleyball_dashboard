@@ -92,7 +92,7 @@ if st.button("💾 Save Event", use_container_width=True):
 
     if p and e and o:
         c.execute(
-            "INSERT INTO events (timestamp, player, event, outcome, video_url) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO events (player, event, outcome, video_url) VALUES (?, ?, ?, ?)",
             (datetime.now().isoformat(), p, f"{e} ({a_type})" if a_type else e, o, video_url)
         )
         conn.commit()
@@ -127,23 +127,23 @@ else:
 st.markdown("---")
 st.markdown("### ⚠️ Danger Zone")
 
-# Show confirmation checkbox first
-confirm_clear = st.checkbox("Are you sure you want to delete all events?", key="confirm_clear")
+if st.button("🗑️ Clear All Events", use_container_width=True):
+    # Delete all rows
+    with sqlite3.connect("volleyball_events.db") as conn_clear:
+        c_clear = conn_clear.cursor()
+        c_clear.execute("DELETE FROM events")
+        conn_clear.commit()
 
-if confirm_clear:
-    if st.button("🗑️ Clear All Events", use_container_width=True):
-        # Clear database
-        with sqlite3.connect("volleyball_events.db") as conn_clear:
-            c_clear = conn_clear.cursor()
-            c_clear.execute("DELETE FROM events")
-            conn_clear.commit()
+    # Reset session state
+    for key in ["selected_player", "selected_event", "selected_outcome", "attack_type"]:
+        if key in st.session_state:
+            st.session_state[key] = None
 
-        # Reset session state
-        for key in ["selected_player", "selected_event", "selected_outcome", "attack_type"]:
-            if key in st.session_state:
-                st.session_state[key] = None
+    st.success("✅ All events have been cleared!")
 
-        st.success("✅ All events have been cleared!")
-
-        # Rerun after database cleared and session reset
-        st.experimental_rerun()
+    # Reload the dataframe immediately
+    df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
+    if df.empty:
+        st.info("No events logged yet.")
+    else:
+        st.dataframe(df, use_container_width=True)
