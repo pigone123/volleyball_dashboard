@@ -30,46 +30,127 @@ if video_url:
     st.video(video_url)
 
 # Event logging section
-st.subheader("📋 Log New Event")
-st.subheader("בחר שחקן")
+st.set_page_config(layout="wide")
+
+# ---------- PLAYER SELECTION ----------
+st.subheader("🏐 בחר שחקן")
+
 players = ["אורי", "אופיר", "בני", "הלל", "שקד", "עומר סער", "עומר", "קארט", "ליאור", "יונתן", "עידו", "רועי"]
 
 if "selected_player" not in st.session_state:
     st.session_state.selected_player = None
+if "selected_event" not in st.session_state:
+    st.session_state.selected_event = None
+if "selected_outcome" not in st.session_state:
+    st.session_state.selected_outcome = None
 
-cols = st.columns(4)  # how many buttons per row
+cols_players = st.columns(len(players))
+
 for i, name in enumerate(players):
-    if cols[i % 4].button(name):
+    selected = st.session_state.selected_player == name
+    if cols_players[i].button(name, key=f"player_{i}"):
         st.session_state.selected_player = name
+    # highlight selected
+    st.markdown(
+        f"""
+        <style>
+        div[data-testid="stHorizontalBlock"] div:nth-child({i+1}) button {{
+            background-color: {'#4CAF50' if selected else '#F0F2F6'};
+            color: {'white' if selected else 'black'};
+            border-radius: 10px;
+            padding: 0.3em 0.8em;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-player = st.session_state.get("selected_player")
+st.markdown("<style> div.stButton>button {margin: 2px 4px !important;} </style>", unsafe_allow_html=True)
+player = st.session_state.selected_player
 if player:
     st.info(f"🎯 נבחר שחקן: {player}")
 else:
     st.warning("אנא בחר שחקן")
 
-# --- Now only 2 columns for event + outcome ---
-col2, col3 = st.columns(2)
+# ---------- EVENT SELECTION ----------
+st.subheader("⚡ בחר מהלך")
 
-with col2:
-    event_type = st.selectbox("מהלך", ["הגשה", "התקפה", "חסימה", "קבלה", "חפירה", "מסירה"])
+events = ["הגשה", "התקפה", "חסימה", "קבלה", "חפירה", "מסירה", "שגיאה"]
+cols_events = st.columns(len(events))
 
-with col3:
-    # You can dynamically change the outcome options depending on the event
-    if event_type == "הגשה":
-        outcome = st.selectbox("תוצאה", ["שגיאה", "אייס", "ביצוע רגיל"])
-    else:
-        outcome = st.selectbox("תוצאה", ["הצלחה", "כישלון", "ניטרלי"])
+for i, e in enumerate(events):
+    selected = st.session_state.selected_event == e
+    if cols_events[i].button(e, key=f"event_{i}"):
+        st.session_state.selected_event = e
+    st.markdown(
+        f"""
+        <style>
+        div[data-testid="stHorizontalBlock"] div:nth-child({i+1}) button {{
+            background-color: {'#2196F3' if selected else '#F0F2F6'};
+            color: {'white' if selected else 'black'};
+            border-radius: 10px;
+            padding: 0.3em 0.8em;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-video_time = st.text_input("Video Time (optional, e.g. 12:34)")
+st.markdown("<style> div.stButton>button {margin: 2px 4px !important;} </style>", unsafe_allow_html=True)
+event_type = st.session_state.selected_event
+if event_type:
+    st.info(f"⚙️ נבחר מהלך: {event_type}")
+else:
+    st.warning("אנא בחר מהלך")
+
+# ---------- OUTCOME SELECTION ----------
+st.subheader("🎯 בחר תוצאה")
+
+# outcomes can depend on event type
+if event_type == "הגשה":
+    outcomes = ["אייס", "שגיאה", "ביצוע רגיל"]
+else:
+    outcomes = ["הצלחה", "כישלון", "ניטרלי"]
+
+cols_outcomes = st.columns(len(outcomes))
+
+for i, outcome_name in enumerate(outcomes):
+    selected = st.session_state.selected_outcome == outcome_name
+    if cols_outcomes[i].button(outcome_name, key=f"outcome_{i}"):
+        st.session_state.selected_outcome = outcome_name
+    st.markdown(
+        f"""
+        <style>
+        div[data-testid="stHorizontalBlock"] div:nth-child({i+1}) button {{
+            background-color: {'#FF9800' if selected else '#F0F2F6'};
+            color: {'white' if selected else 'black'};
+            border-radius: 10px;
+            padding: 0.3em 0.8em;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown("<style> div.stButton>button {margin: 2px 4px !important;} </style>", unsafe_allow_html=True)
+outcome = st.session_state.selected_outcome
+if outcome:
+    st.info(f"✅ נבחרה תוצאה: {outcome}")
+else:
+    st.warning("אנא בחר תוצאה")
+
+
+player = st.session_state.selected_player
+event_type = st.session_state.selected_event
+outcome = st.session_state.selected_outcome
 
 if st.button("Save Event"):
     if not player:
         st.warning("Please enter the player's name.")
     else:
         c.execute(
-            "INSERT INTO events (timestamp, player, event, outcome, video_time, video_url) VALUES (?, ?, ?, ?, ?, ?)",
-            (datetime.now().isoformat(), player, event_type, outcome, video_time, video_url)
+            "INSERT INTO events (timestamp, player, event, outcome, video_url) VALUES (?, ?, ?, ?, ?)",
+            (datetime.now().isoformat(), player, event_type, outcome, video_url)
         )
         conn.commit()
         st.success(f"Event saved for {player} ✅")
