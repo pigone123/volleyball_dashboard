@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 from datetime import datetime
 import pandas as pd
+import streamlit.components.v1 as components
 
 # ------------------ DATABASE ------------------
 conn = sqlite3.connect("volleyball_events.db", check_same_thread=False)
@@ -33,42 +34,55 @@ if video_url:
 
 st.markdown("<div style='margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
 
-# ------------------ BUTTON GRID FUNCTION ------------------
-def button_grid(options, session_key, color):
-    cols = st.columns(len(options), gap="small")
-    for i, option in enumerate(options):
-        selected = st.session_state.get(session_key) == option
-        bg_color = color if selected else "#F0F2F6"
-        fg_color = "white" if selected else "black"
-
-        # Use markdown div to mimic a button
-        if cols[i].button(option, key=f"{session_key}_{option}"):
-            st.session_state[session_key] = option
-
-        cols[i].markdown(
-            f"""
-            <style>
-            div.stButton>button[key="{session_key}_{option}"] {{
-                background-color: {bg_color} !important;
-                color: {fg_color} !important;
-                border-radius:6px;
-                padding:0.3em 0.6em;
-                font-size:0.85rem;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+# ------------------ HTML BUTTON GRID ------------------
+def render_html_buttons(options, session_key, color):
+    """Render clickable HTML buttons via st.components.html"""
+    selected = st.session_state.get(session_key)
+    # Create HTML buttons
+    html_buttons = ""
+    for opt in options:
+        bg = color if opt == selected else "#F0F2F6"
+        fg = "white" if opt == selected else "black"
+        html_buttons += f"""
+        <div class="button" data-value="{opt}" style="
+            display:inline-block;
+            margin:2px;
+            padding:6px 12px;
+            border-radius:6px;
+            background-color:{bg};
+            color:{fg};
+            font-weight:bold;
+            cursor:pointer;
+            user-select:none;
+        ">{opt}</div>
+        """
+    # Wrap in container
+    html_code = f"""
+    <div id="{session_key}_container">{html_buttons}</div>
+    <script>
+    const container = document.getElementById('{session_key}_container');
+    const buttons = container.querySelectorAll('.button');
+    buttons.forEach(btn => {{
+        btn.onclick = () => {{
+            const value = btn.getAttribute('data-value');
+            // Send selected value back to Streamlit
+            window.parent.postMessage({{isStreamlitMessage:true, type:'SET_SESSION_STATE', key:'{session_key}', value:value}}, '*');
+        }}
+    }});
+    </script>
+    """
+    # Render HTML
+    components.html(html_code, height=50)
 
 # ------------------ PLAYER SELECTION ------------------
 st.markdown("### 🏐 Select Player")
 players = ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar","Omer","Kart","Lior","Yonatan","Ido","Roi"]
-button_grid(players, "selected_player", "#4CAF50")
+render_html_buttons(players, "selected_player", "#4CAF50")
 
 # ------------------ EVENT SELECTION ------------------
 st.markdown("### ⚡ Select Event")
 events = ["Serve","Attack","Block","Receive","Dig","Set","Error"]
-button_grid(events, "selected_event", "#2196F3")
+render_html_buttons(events, "selected_event", "#2196F3")
 
 # ------------------ OUTCOME SELECTION ------------------
 st.markdown("### 🎯 Select Outcome")
@@ -80,9 +94,8 @@ elif event_selected in events:
 else:
     outcomes = []
 
-# Only display if event is selected
 if outcomes:
-    button_grid(outcomes, "selected_outcome", "#FF9800")
+    render_html_buttons(outcomes, "selected_outcome", "#FF9800")
 
 # ------------------ SAVE BUTTON ------------------
 st.markdown("<div style='margin-top:0.2rem; margin-bottom:0.2rem'></div>", unsafe_allow_html=True)
