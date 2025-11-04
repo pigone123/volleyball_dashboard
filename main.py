@@ -34,6 +34,8 @@ if video_url:
 st.markdown("<div style='margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
 
 # ---------------- HELPER FUNCTION ----------------
+
+
 def horizontal_radio(label, options, session_key):
     selected = st.session_state.get(session_key)
     value = st.radio(
@@ -56,31 +58,30 @@ event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set"], "
 # ---------------- OUTCOME SELECTION ----------------
 attack_type = None
 st.markdown("### 🎯 Select Outcome")
-if event == "Serve":
-    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
+
+event_outcomes = {
+    "Serve": ["Ace","Out","Net","Good","Neutral","Bad"],
+    "Attack": ["Blockout","Out","Net","Good","Neutral","Bad"],
+    "Block": ["Blockout","Touch","Net","Good","Neutral", "Bad"],
+    "Receive": ["Good","Netural","Bad"],
+    "Dig": ["Good","Netural","Bad"],
+    "Set": ["Reach Antenna","Didn't Reach Antenna","Overpass Antenna"]
+}
+
+
 
 if event == "Attack":
     st.markdown("### ⚡ Attack Type")
-    attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole"], "attack_type")
-    outcome_options = ["Blockout","Out","Net", "Good", "Netural", "Bad"]
-elif event == "Block":
-    outcome_options = ["Blockout","Out","Net", "Good", "Netural", "Bad"]
-elif event == "Serve":
-    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
-elif event == "Serve":
-    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
-elif event == "Serve":
-    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
+    attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
 
-# elif event in ["Attack","Block","Receive","Dig","Set","Error"]:
-#     outcome_options = ["Success","Fail","Neutral"]
-else:
-    outcome_options = []
+
+outcome_options = event_outcomes.get(event, [])
 
 if outcome_options:
     outcome = horizontal_radio("", outcome_options, "selected_outcome")
 else:
     outcome = None
+
 
 # ---------------- SAVE EVENT ----------------
 st.markdown("<div style='margin-top:0.5rem; margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
