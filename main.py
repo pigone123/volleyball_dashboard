@@ -35,9 +35,12 @@ col1, col2, col3 = st.columns(3)
 with col1:
     player = st.selectbox("שם שחקן", ["אורי", "אופיר", "בני", "הלל",  "שקד", "עומר סער", "עומר", "קארט", "ליאור", "יונתן", "עידו", "רועי" ])
 with col2:
-    event_type = st.selectbox("Event Type", ["Serve", "Attack", "Block", "Receive", "Dig", "Set", "Error"])
+    event_type = st.selectbox("מהלך", ["הגשה", "התקפה", "חסימה", "קבלה", "dig", "מסירה"])
 with col3:
+
     outcome = st.selectbox("Outcome", ["Success", "Fail", "Neutral"])
+    if event_type == "הגשה":
+        outcome = st.selectbox("Outcome", ["bla", "test", "Neutral"])
 
 video_time = st.text_input("Video Time (optional, e.g. 12:34)")
 
