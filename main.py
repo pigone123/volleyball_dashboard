@@ -63,13 +63,13 @@ if event == "Attack":
     st.markdown("### ⚡ Attack Type")
     attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole"], "attack_type")
     outcome_options = ["Blockout","Out","Net", "Good", "Netural", "Bad"]
-if event == "Block":
+elif event == "Block":
     outcome_options = ["Blockout","Out","Net", "Good", "Netural", "Bad"]
-if event == "Serve":
+elif event == "Serve":
     outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
-if event == "Serve":
+elif event == "Serve":
     outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
-if event == "Serve":
+elif event == "Serve":
     outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
 
 # elif event in ["Attack","Block","Receive","Dig","Set","Error"]:
