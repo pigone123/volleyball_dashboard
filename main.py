@@ -69,7 +69,6 @@ event_outcomes = {
 }
 
 
-
 if event == "Attack":
     st.markdown("### ⚡ Attack Type")
     attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
@@ -123,3 +122,20 @@ if not df.empty:
     st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
 else:
     st.info("No events logged yet.")
+
+
+st.markdown("---")
+st.markdown("### ⚠️ Danger Zone")
+
+if st.button("🗑️ Clear All Events", use_container_width=True):
+    # Confirmation popup
+    confirm = st.checkbox("Are you sure you want to delete all events?")
+    if confirm:
+        c.execute("DELETE FROM events")
+        conn.commit()
+        st.success("✅ All events have been cleared!")
+        # Optionally reset selections and rerun
+        for key in ["selected_player", "selected_event", "selected_outcome", "attack_type"]:
+            if key in st.session_state:
+                st.session_state[key] = None
+        st.rerun()
