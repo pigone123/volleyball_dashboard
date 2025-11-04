@@ -51,12 +51,27 @@ player = horizontal_radio("", ["Ori","Ofir","Beni","Hillel","Shaked","Omer Saar"
 
 # ---------------- EVENT SELECTION ----------------
 st.markdown("### ⚡ Select Event")
-event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set","Error"], "selected_event")
+event = horizontal_radio("", ["Serve","Free Ball","Block","Receive","Dig","Set"], "selected_event")
 
 # ---------------- OUTCOME SELECTION ----------------
+attack_type = None
 st.markdown("### 🎯 Select Outcome")
 if event == "Serve":
-    outcome_options = ["Ace","Error","Normal"]
+    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
+
+if event == "Attack":
+    st.markdown("### ⚡ Attack Type")
+    attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole"], "attack_type")
+    outcome_options = ["Blockout","Out","Net", "Good", "Netural", "Bad"]
+if event == "Block":
+    outcome_options = ["Blockout","Out","Net", "Good", "Netural", "Bad"]
+if event == "Serve":
+    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
+if event == "Serve":
+    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
+if event == "Serve":
+    outcome_options = ["Ace","Out","Net", "Good", "Netural", "Bad"]
+
 elif event in ["Attack","Block","Receive","Dig","Set","Error"]:
     outcome_options = ["Success","Fail","Neutral"]
 else:
@@ -73,20 +88,24 @@ if st.button("💾 Save Event", use_container_width=True):
     p = st.session_state.get("selected_player")
     e = st.session_state.get("selected_event")
     o = st.session_state.get("selected_outcome")
+    a_type = st.session_state.get("attack_type") if e == "Attack" else None
+
     if p and e and o:
         c.execute(
             "INSERT INTO events (timestamp, player, event, outcome, video_url) VALUES (?, ?, ?, ?, ?)",
-            (datetime.now().isoformat(), p, e, o, video_url)
+            (datetime.now().isoformat(), p, f"{e} ({a_type})" if a_type else e, o, video_url)
         )
         conn.commit()
-        st.success(f"Saved: {p} | {e} | {o}")
+        st.success(f"Saved: {p} | {e} | {a_type if a_type else ''} | {o}")
+        
+        # Reset selections
         st.session_state["selected_player"] = None
         st.session_state["selected_event"] = None
         st.session_state["selected_outcome"] = None
+        st.session_state["attack_type"] = None
         st.rerun()
     else:
         st.error("Please select a player, event, and outcome before saving.")
-
 # ---------------- LOGGED EVENTS ----------------
 st.markdown("<hr style='margin-top:0.2rem;margin-bottom:0.2rem'>", unsafe_allow_html=True)
 st.markdown("### 📊 Logged Events")
