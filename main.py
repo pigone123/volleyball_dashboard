@@ -62,10 +62,10 @@ st.markdown("### 🎯 Select Outcome")
 event_outcomes = {
     "Serve": ["Ace","Out","Net","Good","Neutral","Bad"],
     "Attack": ["Blockout","Out","Net","Good","Neutral","Bad"],
-    "Block": ["Blockout","Touch","Net","Good","Neutral", "Bad"],
+    "Block": ["Blockout","Touch","Kill","Softblock"],
     "Receive": ["Good","Netural","Bad"],
     "Dig": ["Good","Netural","Bad"],
-    "Set": ["Reach Antenna","Didn't Reach Antenna","Overpass Antenna"]
+    "Set": ["Overpass Antenna","Position 1", "Position 2", "Position 3", "Position 4" ,"Position 6"]
 }
 
 
@@ -75,6 +75,10 @@ if event == "Attack":
 
 
 outcome_options = event_outcomes.get(event, [])
+
+if event =="Set":
+    st.markdown("### ⚡ Blockers Count")
+    attack_type = horizontal_radio("", ["1", "2", "0"], "attack_type")
 
 if outcome_options:
     outcome = horizontal_radio("", outcome_options, "selected_outcome")
