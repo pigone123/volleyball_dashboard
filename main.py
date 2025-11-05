@@ -22,9 +22,10 @@ conn.commit()
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
 # ---------------- SESSION STATE ----------------
-for key in ["selected_player", "selected_event", "selected_outcome"]:
+for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "blockers_count"]:
     if key not in st.session_state:
         st.session_state[key] = None
+
 
 # ---------------- VIDEO INPUT ----------------
 video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.youtube.com/watch?v=example")
@@ -69,16 +70,18 @@ event_outcomes = {
 }
 
 
+attack_type = None
+blockers_count = None
+
 if event == "Attack":
     st.markdown("### ⚡ Attack Type")
     attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
 
+elif event == "Set":
+    st.markdown("### 🧱 Number of Blockers")
+    blockers_count = horizontal_radio("", ["0", "1", "2"], "blockers_count")
 
 outcome_options = event_outcomes.get(event, [])
-
-if event =="Set":
-    st.markdown("### ⚡ Blockers Count")
-    attack_type = horizontal_radio("", ["1", "2", "0"], "attack_type")
 
 if outcome_options:
     outcome = horizontal_radio("", outcome_options, "selected_outcome")
@@ -93,11 +96,13 @@ if st.button("💾 Save Event", use_container_width=True):
     e = st.session_state.get("selected_event")
     o = st.session_state.get("selected_outcome")
     a_type = st.session_state.get("attack_type") if e == "Attack" else None
+    b_count = st.session_state.get("blockers_count") if e == "Set" else None
 
     if p and e and o:
+        extra_info = a_type or b_count
         c.execute(
             "INSERT INTO events (player, event, outcome, video_url) VALUES (?, ?, ?, ?)",
-            (p, f"{e} ({a_type})" if a_type else e, o, video_url)
+            (p, f"{e} ({extra_info})" if extra_info else e, o, video_url)
         )
         conn.commit()
         st.success(f"Saved: {p} | {e} | {a_type if a_type else ''} | {o}")
@@ -139,9 +144,9 @@ if st.button("🗑️ Clear All Events", use_container_width=True):
         conn_clear.commit()
 
     # Reset session state
-    for key in ["selected_player", "selected_event", "selected_outcome", "attack_type"]:
-        if key in st.session_state:
-            st.session_state[key] = None
+    for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "blockers_count"]:
+        st.session_state[key] = None
+
 
     st.success("✅ All events have been cleared!")
 
