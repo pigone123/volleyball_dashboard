@@ -58,7 +58,7 @@ event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set"], "
 
 # ---------------- OUTCOME SELECTION ----------------
 attack_type = None
-st.markdown("### 🎯 Select Outcome")
+
 
 event_outcomes = {
     "Serve": ["Ace","Out","Net","Good","Neutral","Bad"],
@@ -82,7 +82,7 @@ elif event == "Set":
     blockers_count = horizontal_radio("", ["0", "1", "2"], "blockers_count")
 
 outcome_options = event_outcomes.get(event, [])
-
+st.markdown("### 🎯 Select Outcome")
 if outcome_options:
     outcome = horizontal_radio("", outcome_options, "selected_outcome")
 else:
