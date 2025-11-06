@@ -97,7 +97,7 @@ if st.button("💾 Save Event", use_container_width=True):
     e = st.session_state.get("selected_event")
     o = st.session_state.get("selected_outcome")
     a_type = st.session_state.get("attack_type") if e == "Attack" else None
-    b_count = st.session_state.get("blockers_count") if e == "Set" else None
+    b_count = st.session_state.get("set_to") if e == "Set" else None
 
     if p and e and o:
         extra_info = a_type or b_count
@@ -113,6 +113,7 @@ if st.button("💾 Save Event", use_container_width=True):
         st.session_state["selected_event"] = None
         st.session_state["selected_outcome"] = None
         st.session_state["attack_type"] = None
+        st.session_state["set_to"] = None
         st.rerun()
     else:
         st.error("Please select a player, event, and outcome before saving.")
