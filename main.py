@@ -20,8 +20,6 @@ CREATE TABLE IF NOT EXISTS events (
 """)
 conn.commit()
 
-# c.execute("ALTER TABLE events ADD COLUMN game_name TEXT")
-# conn.commit()
 
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
@@ -71,7 +69,7 @@ event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set"], "
 # ---------------- OUTCOME SELECTION ----------------
 attack_type = None
 
-# Ace, net, out, in, off system
+
 event_outcomes = {
     "Serve": ["Ace","Out","Net","In","Off System"],
     "Attack": ["Blockout","Out","Net","In Play","off System","Kill"],
