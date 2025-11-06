@@ -79,7 +79,7 @@ def horizontal_radio(label, options, session_key):
 
 # ---------------- PLAYER SELECTION ----------------
 st.markdown("### 🏐 Select Player")
-player = horizontal_radio("", ["Ori","Ofir","Beni","Hillel","Shak","Omer Saar","Omer","Karat","Lior","Yonatan","Ido","Roi"], "selected_player")
+player = horizontal_radio("", ["Ori","Ofir","Beni","Hillel","Shak","Omer Saar","Omer","Karat","Lior","Yonatan","Ido","Royi"], "selected_player")
 
 # ---------------- EVENT SELECTION ----------------
 st.markdown("### ⚡ Select Event")
