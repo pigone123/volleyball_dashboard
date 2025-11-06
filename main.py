@@ -79,7 +79,7 @@ if event == "Attack":
 
 elif event == "Set":
     st.markdown("### 🧱 Set to ")
-    set_to = horizontal_radio("", ["Position 1", "Position 2", "Position 3", "Position 4" ,"Position 6"], "Set to Position")
+    set_to = horizontal_radio("", ["Position 1", "Position 2", "Position 3", "Position 4" ,"Position 6"], "set_to")
     #blockers_count = horizontal_radio("", ["0", "1", "2"], "blockers_count")
 
 outcome_options = event_outcomes.get(event, [])
@@ -107,13 +107,9 @@ if st.button("💾 Save Event", use_container_width=True):
         )
         conn.commit()
         st.success(f"Saved: {p} | {e} | {a_type if a_type else ''} | {o}")
-        
-        # Reset selections
-        st.session_state["selected_player"] = None
-        st.session_state["selected_event"] = None
-        st.session_state["selected_outcome"] = None
-        st.session_state["attack_type"] = None
-        st.session_state["set_to"] = None
+        for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to"]:
+            st.session_state[key] = None
+       
         st.rerun()
     else:
         st.error("Please select a player, event, and outcome before saving.")
