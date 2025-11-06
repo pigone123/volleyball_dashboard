@@ -14,13 +14,14 @@ CREATE TABLE IF NOT EXISTS events (
     event TEXT,
     outcome TEXT,
     video_time TEXT,
-    video_url TEXT
+    video_url TEXT,
+    game_name TEXT
 )
 """)
 conn.commit()
 
-c.execute("ALTER TABLE events ADD COLUMN game_name TEXT")
-conn.commit()
+# c.execute("ALTER TABLE events ADD COLUMN game_name TEXT")
+# conn.commit()
 
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
