@@ -3,6 +3,25 @@ import sqlite3
 from datetime import datetime
 import pandas as pd
 
+import time
+
+def safe_execute(cursor, conn, query, params=()):
+    """Run a query safely with retry if the database is locked."""
+    for attempt in range(5):  # try up to 5 times
+        try:
+            cursor.execute(query, params)
+            conn.commit()
+            return True
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e):
+                time.sleep(0.2)  # wait 200 ms, then retry
+            else:
+                raise  # some other SQLite error
+    st.error("⚠️ Database is busy, please try again in a moment.")
+    return False
+
+
+
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("volleyball_events.db", check_same_thread=False)
 c = conn.cursor()
@@ -111,10 +130,12 @@ if st.button("💾 Save Event", use_container_width=True):
 
     if p and e and o:
         extra_info = a_type or b_count
-        c.execute(
+        safe_execute(
+            c, conn,
             "INSERT INTO events (player, event, outcome, video_url, game_name) VALUES (?, ?, ?, ?, ?)",
-            (p, f"{e} ({extra_info})" if extra_info else e, o, video_url, game_name)
+            (p, f"{e} ({extra_info})" if extra_info else e, o, video_url, g)
         )
+
         conn.commit()
         st.success(f"Saved: {p} | {e} | {a_type if a_type else ''} | {o}")
         for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to"]:
