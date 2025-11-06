@@ -66,7 +66,7 @@ event_outcomes = {
     "Block": ["Blockout","Touch","Kill","Softblock"],
     "Receive": ["Good","Netural","Bad"],
     "Dig": ["Good","Netural","Bad"],
-    "Set": ["Overpass Antenna","Position 1", "Position 2", "Position 3", "Position 4" ,"Position 6"]
+    "Set": ["0 Blockers", "1 Blocker", "2 Blocker"]
 }
 
 
@@ -78,8 +78,9 @@ if event == "Attack":
     attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
 
 elif event == "Set":
-    st.markdown("### 🧱 Number of Blockers")
-    blockers_count = horizontal_radio("", ["0", "1", "2"], "blockers_count")
+    st.markdown("### 🧱 Set to ")
+    set_to = horizontal_radio("", ["Position 1", "Position 2", "Position 3", "Position 4" ,"Position 6"], "Set to Position")
+    #blockers_count = horizontal_radio("", ["0", "1", "2"], "blockers_count")
 
 outcome_options = event_outcomes.get(event, [])
 st.markdown("### 🎯 Select Outcome")
