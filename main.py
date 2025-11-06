@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS events (
 """)
 conn.commit()
 
+c.execute("ALTER TABLE events ADD COLUMN game_name TEXT")
+conn.commit()
+
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
 # ---------------- SESSION STATE ----------------
@@ -33,6 +36,14 @@ if video_url:
     st.video(video_url)
 
 st.markdown("<div style='margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
+
+st.markdown("### 🏆 Game Info")
+game_name = st.text_input("Enter Game Name", placeholder="e.g. Blich vs Ramat Gan")
+
+if game_name:
+    st.session_state["game_name"] = game_name
+elif "game_name" in st.session_state:
+    game_name = st.session_state["game_name"]
 
 # ---------------- HELPER FUNCTION ----------------
 
@@ -102,8 +113,8 @@ if st.button("💾 Save Event", use_container_width=True):
     if p and e and o:
         extra_info = a_type or b_count
         c.execute(
-            "INSERT INTO events (player, event, outcome, video_url) VALUES (?, ?, ?, ?)",
-            (p, f"{e} ({extra_info})" if extra_info else e, o, video_url)
+            "INSERT INTO events (player, event, outcome, video_url, game_name) VALUES (?, ?, ?, ?, ?)",
+            (p, f"{e} ({extra_info})" if extra_info else e, o, video_url, game_name)
         )
         conn.commit()
         st.success(f"Saved: {p} | {e} | {a_type if a_type else ''} | {o}")
@@ -119,8 +130,12 @@ st.markdown("### 📊 Logged Events")
 df = pd.read_sql_query("SELECT * FROM events ORDER BY id DESC", conn)
 if not df.empty:
     with st.expander("🔍 Filter"):
+        sel_game = st.multiselect("Game", df["game_name"].dropna().unique())
         sel_player = st.multiselect("Player", df["player"].unique())
         sel_event = st.multiselect("Event", df["event"].unique())
+    
+        if sel_game:
+            df = df[df["game_name"].isin(sel_game)]
         if sel_player:
             df = df[df["player"].isin(sel_player)]
         if sel_event:
