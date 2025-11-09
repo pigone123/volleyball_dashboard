@@ -133,7 +133,7 @@ if st.button("💾 Save Event", use_container_width=True):
         safe_execute(
             c, conn,
             "INSERT INTO events (player, event, outcome, video_url, game_name) VALUES (?, ?, ?, ?, ?)",
-            (p, f"{e} ({extra_info})" if extra_info else e, o, video_url, g)
+            (p, f"{e} ({extra_info})" if extra_info else e, o, video_url, game_name)
         )
 
         conn.commit()
