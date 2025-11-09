@@ -91,7 +91,7 @@ blockers_count = None
 
 event_outcomes = {
     "Serve": ["Ace", "Out", "Net", "In", "Off System"],
-    "Attack": ["Blockout", "Out", "Net", "In Play", "Off System", "Kill"],
+    "Attack": ["Blockout", "Out", "Net", "In Play", "Off System"],
     "Block": ["Blockout", "Touch", "Kill", "Softblock", "Error"],
     "Receive": ["Good", "Neutral", "Bad"],
     "Dig": ["Good", "Neutral", "Bad"],
@@ -114,7 +114,7 @@ base_outcomes = event_outcomes.get(event, [])
 
 # Add extra outcomes only for spike type attacks
 if event == "Attack" and st.session_state.get("attack_type") == "Spike":
-    outcome_options = base_outcomes + ["Hard Blocked", "Soft Blocked"]
+    outcome_options = base_outcomes + ["Hard Blocked", "Soft Blocked", "Kill"]
 else:
     outcome_options = base_outcomes
 
