@@ -101,7 +101,8 @@ event_outcomes = {
 
 attack_type = None
 blockers_count = None
-
+if event == "Attack" and attack_type == "Spike":
+    outcomes = event_outcomes["Attack"] + (["Hard Blocked", "Soft Blocked"] if attack_type == "Spike" else [])
 if event == "Attack":
     st.markdown("### ⚡ Attack Type")
     attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
@@ -113,7 +114,7 @@ elif event == "Set":
 outcome_options = event_outcomes.get(event, [])
 st.markdown("### 🎯 Select Outcome")
 if outcome_options:
-    outcome = horizontal_radio("", outcome_options, "selected_outcome")
+    outcome = horizontal_radio("", outcomes, "selected_outcome")
 else:
     outcome = None
 
