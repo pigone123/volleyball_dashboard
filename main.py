@@ -92,7 +92,7 @@ attack_type = None
 event_outcomes = {
     "Serve": ["Ace","Out","Net","In","Off System"],
     "Attack": ["Blockout","Out","Net","In Play","off System","Kill"],
-    "Block": ["Blockout","Touch","Kill","Softblock", "Error],
+    "Block": ["Blockout","Touch","Kill","Softblock", "Error"],
     "Receive": ["Good","Netural","Bad"],
     "Dig": ["Good","Netural","Bad"],
     "Set": ["0 Blockers", "1 Blocker", "2 Blocker"]
