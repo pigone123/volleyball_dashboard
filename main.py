@@ -114,7 +114,7 @@ elif event == "Set":
 outcome_options = event_outcomes.get(event, [])
 st.markdown("### 🎯 Select Outcome")
 if outcome_options:
-    outcome = horizontal_radio("", outcomes, "selected_outcome")
+    outcome = horizontal_radio("", outcome_options, "selected_outcome")
 else:
     outcome = None
 
