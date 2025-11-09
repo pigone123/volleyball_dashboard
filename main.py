@@ -87,37 +87,42 @@ event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set"], "
 
 # ---------------- OUTCOME SELECTION ----------------
 attack_type = None
-
+blockers_count = None
 
 event_outcomes = {
-    "Serve": ["Ace","Out","Net","In","Off System"],
-    "Attack": ["Blockout","Out","Net","In Play","off System","Kill"],
-    "Block": ["Blockout","Touch","Kill","Softblock", "Error"],
-    "Receive": ["Good","Netural","Bad"],
-    "Dig": ["Good","Netural","Bad"],
+    "Serve": ["Ace", "Out", "Net", "In", "Off System"],
+    "Attack": ["Blockout", "Out", "Net", "In Play", "Off System", "Kill"],
+    "Block": ["Blockout", "Touch", "Kill", "Softblock", "Error"],
+    "Receive": ["Good", "Neutral", "Bad"],
+    "Dig": ["Good", "Neutral", "Bad"],
     "Set": ["0 Blockers", "1 Blocker", "2 Blocker"]
 }
 
-
-attack_type = None
-blockers_count = None
-if event == "Attack" and attack_type == "Spike":
-    outcomes = event_outcomes["Attack"] + (["Hard Blocked", "Soft Blocked"] if attack_type == "Spike" else [])
+# ---------------- EVENT-SPECIFIC SUBCHOICES ----------------
 if event == "Attack":
     st.markdown("### ⚡ Attack Type")
     attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
 
 elif event == "Set":
-    st.markdown("### 🧱 Set to ")
-    set_to = horizontal_radio("", ["Position 1", "Position 2", "Position 3", "Position 4" ,"Position 6"], "set_to")
-    
-outcome_options = event_outcomes.get(event, [])
+    st.markdown("### 🧱 Set To")
+    set_to = horizontal_radio("", ["Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
+else:
+    set_to = None
+
+# ---------------- OUTCOME OPTIONS ----------------
+base_outcomes = event_outcomes.get(event, [])
+
+# Add extra outcomes only for spike type attacks
+if event == "Attack" and st.session_state.get("attack_type") == "Spike":
+    outcome_options = base_outcomes + ["Hard Blocked", "Soft Blocked"]
+else:
+    outcome_options = base_outcomes
+
 st.markdown("### 🎯 Select Outcome")
 if outcome_options:
     outcome = horizontal_radio("", outcome_options, "selected_outcome")
 else:
     outcome = None
-
 
 # ---------------- SAVE EVENT ----------------
 st.markdown("<div style='margin-top:0.5rem; margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
