@@ -1,56 +1,24 @@
 import streamlit as st
-import psycopg2
 import pandas as pd
 from datetime import datetime
-import time
+import requests
+import os
+import json
 
-# ---------------- DATABASE CONNECTION ----------------
-def get_connection():
-    return psycopg2.connect(
-        user=st.secrets["postgres"]["USER"],
-        password=st.secrets["postgres"]["PASSWORD"],
-        host=st.secrets["postgres"]["HOST"],
-        port=st.secrets["postgres"]["PORT"],
-        dbname=st.secrets["postgres"]["DBNAME"],
-        sslmode="require"  # <--- this is important for Supabase
-    )
+# ---------------- SUPABASE CONFIG ----------------
+SUPABASE_URL = st.secrets["SUPABASE"]["URL"]  # e.g. "https://xxxx.supabase.co"
+SUPABASE_KEY = st.secrets["SUPABASE"]["KEY"]  # anon/public key
+TABLE_NAME = "events"  # make sure you create this table in Supabase
 
-def safe_execute(cursor, conn, query, params=()):
-    """Run a query safely with retry if the database is busy."""
-    for attempt in range(5):
-        try:
-            cursor.execute(query, params)
-            conn.commit()
-            return True
-        except psycopg2.OperationalError as e:
-            if "could not obtain lock" in str(e):
-                time.sleep(0.2)
-            else:
-                raise
-    st.error("⚠️ Database is busy, please try again in a moment.")
-    return False
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
 
-# ---------------- CREATE TABLE IF NOT EXISTS ----------------
-with get_connection() as conn:
-    with conn.cursor() as c:
-        c.execute("""
-        CREATE TABLE IF NOT EXISTS events (
-            id SERIAL PRIMARY KEY,
-            timestamp TIMESTAMP,
-            player TEXT,
-            event TEXT,
-            outcome TEXT,
-            video_time TEXT,
-            video_url TEXT,
-            game_name TEXT
-        );
-        """)
-        conn.commit()
-
-# ---------------- STREAMLIT PAGE CONFIG ----------------
+# ---------------- STREAMLIT CONFIG ----------------
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
-# ---------------- SESSION STATE ----------------
 for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to", "game_name"]:
     if key not in st.session_state:
         st.session_state[key] = None
@@ -60,8 +28,6 @@ video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.you
 if video_url:
     st.video(video_url)
 
-st.markdown("<div style='margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
-
 # ---------------- GAME INFO ----------------
 game_name = st.text_input("🏆 Enter Game Name", placeholder="e.g. Blich vs Ramat Gan")
 if game_name:
@@ -69,7 +35,7 @@ if game_name:
 elif "game_name" in st.session_state:
     game_name = st.session_state["game_name"]
 
-# ---------------- HELPER FUNCTION ----------------
+# ---------------- HELPER ----------------
 def horizontal_radio(label, options, session_key):
     selected = st.session_state.get(session_key)
     value = st.radio(
@@ -82,14 +48,12 @@ def horizontal_radio(label, options, session_key):
     return value
 
 # ---------------- PLAYER SELECTION ----------------
-st.markdown("### 🏐 Select Player")
-player = horizontal_radio("", ["Ori","Ofir","Beni","Hillel","Shak","Omer Saar","Omer","Karat","Lior","Yonatan","Ido","Royi"], "selected_player")
+player = horizontal_radio("### 🏐 Select Player", ["Ori","Ofir","Beni","Hillel","Shak","Omer Saar","Omer","Karat","Lior","Yonatan","Ido","Royi"], "selected_player")
 
 # ---------------- EVENT SELECTION ----------------
-st.markdown("### ⚡ Select Event")
-event = horizontal_radio("", ["Serve","Attack","Block","Receive","Dig","Set"], "selected_event")
+event = horizontal_radio("### ⚡ Select Event", ["Serve","Attack","Block","Receive","Dig","Set"], "selected_event")
 
-# ---------------- EVENT-SPECIFIC SUBCHOICES ----------------
+# ---------------- SUBCHOICES ----------------
 attack_type = None
 set_to = None
 
@@ -103,65 +67,60 @@ event_outcomes = {
 }
 
 if event == "Attack":
-    st.markdown("### ⚡ Attack Type")
-    attack_type = horizontal_radio("", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
-
+    attack_type = horizontal_radio("### ⚡ Attack Type", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
 elif event == "Set":
-    st.markdown("### 🧱 Set To")
-    set_to = horizontal_radio("", ["Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
+    set_to = horizontal_radio("### 🧱 Set To", ["Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
 
-# ---------------- OUTCOME SELECTION ----------------
+# ---------------- OUTCOME ----------------
 base_outcomes = event_outcomes.get(event, [])
 if event == "Attack" and st.session_state.get("attack_type") == "Spike":
     outcome_options = base_outcomes + ["Hard Blocked", "Soft Blocked", "Kill"]
 else:
     outcome_options = base_outcomes
 
-st.markdown("### 🎯 Select Outcome")
-if outcome_options:
-    outcome = horizontal_radio("", outcome_options, "selected_outcome")
-else:
-    outcome = None
+outcome = horizontal_radio("### 🎯 Select Outcome", outcome_options, "selected_outcome") if outcome_options else None
 
 # ---------------- SAVE EVENT ----------------
-st.markdown("<div style='margin-top:0.5rem; margin-bottom:0.5rem'></div>", unsafe_allow_html=True)
-if st.button("💾 Save Event", use_container_width=True):
-    p = st.session_state.get("selected_player")
-    e = st.session_state.get("selected_event")
-    o = st.session_state.get("selected_outcome")
-    a_type = st.session_state.get("attack_type") if e == "Attack" else None
-    s_to = st.session_state.get("set_to") if e == "Set" else None
-
-    if p and e and o:
-        extra_info = a_type or s_to
-        with get_connection() as conn:
-            with conn.cursor() as c:
-                safe_execute(
-                    c, conn,
-                    "INSERT INTO events (timestamp, player, event, outcome, video_url, game_name) VALUES (%s, %s, %s, %s, %s, %s)",
-                    (datetime.now(), p, f"{e} ({extra_info})" if extra_info else e, o, video_url, game_name)
-                )
-        st.success(f"Saved: {p} | {e} | {extra_info if extra_info else ''} | {o}")
-
-        # Reset session state
-        for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to"]:
+def save_event():
+    extra_info = attack_type if attack_type else set_to
+    data = {
+        "timestamp": datetime.now().isoformat(),
+        "player": player,
+        "event": f"{event} ({extra_info})" if extra_info else event,
+        "outcome": outcome,
+        "video_url": video_url,
+        "game_name": game_name
+    }
+    response = requests.post(f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}", headers=HEADERS, data=json.dumps(data))
+    if response.status_code in [200, 201]:
+        st.success(f"Saved: {player} | {event} | {extra_info if extra_info else ''} | {outcome}")
+        for key in ["selected_player","selected_event","selected_outcome","attack_type","set_to"]:
             st.session_state[key] = None
-        st.rerun()
+    else:
+        st.error(f"Failed to save: {response.text}")
+
+if st.button("💾 Save Event", use_container_width=True):
+    if player and event and outcome:
+        save_event()
     else:
         st.error("Please select a player, event, and outcome before saving.")
 
 # ---------------- LOGGED EVENTS ----------------
-st.markdown("<hr style='margin-top:0.2rem;margin-bottom:0.2rem'>", unsafe_allow_html=True)
-st.markdown("### 📊 Logged Events")
-with get_connection() as conn:
-    df = pd.read_sql("SELECT * FROM events ORDER BY id DESC", conn)
+def load_events():
+    query = f"SELECT * FROM {TABLE_NAME} ORDER BY id DESC"
+    response = requests.get(f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?select=*", headers=HEADERS)
+    if response.status_code == 200:
+        return pd.DataFrame(response.json())
+    else:
+        st.error(f"Failed to load events: {response.text}")
+        return pd.DataFrame()
 
+df = load_events()
 if not df.empty:
     with st.expander("🔍 Filter"):
         sel_game = st.multiselect("Game", df["game_name"].dropna().unique())
         sel_player = st.multiselect("Player", df["player"].unique())
         sel_event = st.multiselect("Event", df["event"].unique())
-    
         if sel_game:
             df = df[df["game_name"].isin(sel_game)]
         if sel_player:
@@ -172,14 +131,3 @@ if not df.empty:
     st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
 else:
     st.info("No events logged yet.")
-
-# ---------------- DANGER ZONE ----------------
-st.markdown("---")
-st.markdown("### ⚠️ Danger Zone")
-if st.button("🗑️ Clear All Events", use_container_width=True):
-    with get_connection() as conn:
-        with conn.cursor() as c:
-            safe_execute(c, conn, "DELETE FROM events")
-    for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to"]:
-        st.session_state[key] = None
-    st.success("✅ All events have been cleared!")
