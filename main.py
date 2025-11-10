@@ -84,7 +84,6 @@ outcome = horizontal_radio("### 🎯 Select Outcome", outcome_options, "selected
 def save_event():
     extra_info = attack_type if attack_type else set_to
     data = {
-        "timestamp": datetime.now().isoformat(),
         "player": player,
         "event": f"{event} ({extra_info})" if extra_info else event,
         "outcome": outcome,
