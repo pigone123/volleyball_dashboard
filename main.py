@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import requests
-import os
 import json
 
 # ---------------- SUPABASE CONFIG ----------------
-SUPABASE_URL = st.secrets["SUPABASE"]["URL"] 
-SUPABASE_KEY = st.secrets["SUPABASE"]["KEY"] 
+SUPABASE_URL = st.secrets["SUPABASE"]["URL"]
+SUPABASE_KEY = st.secrets["SUPABASE"]["KEY"]
 TABLE_NAME = "Volleyball_events"
 
 HEADERS = {
@@ -18,54 +17,65 @@ HEADERS = {
 # ---------------- STREAMLIT CONFIG ----------------
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
-for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to", "game_name", "set_number"]:
-    if key not in st.session_state:
-        st.session_state[key] = None
-
+# Initialize all session_state variables
+for key in [
+    "video_url", "game_name", "set_number",
+    "selected_player", "selected_event",
+    "selected_outcome", "attack_type", "set_to"
+]:
+    st.session_state.setdefault(key, "")
 
 # ---------------- VIDEO INPUT ----------------
-video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.youtube.com/watch?v=example")
-if video_url:
-    st.video(video_url)
+st.session_state.video_url = st.text_input(
+    "🎥 YouTube Video URL",
+    value=st.session_state.video_url,
+    placeholder="https://www.youtube.com/watch?v=example",
+    key="video_url_input"
+)
+if st.session_state.video_url:
+    st.video(st.session_state.video_url)
 
 # ---------------- GAME INFO ----------------
-game_name = st.text_input("🏆 Enter Game Name", placeholder="e.g. Blich vs Ramat Gan")
-if game_name:
-    st.session_state["game_name"] = game_name
-elif "game_name" in st.session_state:
-    game_name = st.session_state["game_name"]
-
-
-set_number = st.selectbox(
-    "🎯 Select Set Number (optional)",
-    ["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"],
-    index=0 if st.session_state.get("set_number") is None else
-    ["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"].index(st.session_state["set_number"])
+st.session_state.game_name = st.text_input(
+    "🏆 Enter Game Name",
+    value=st.session_state.game_name,
+    placeholder="e.g. Blich vs Ramat Gan",
+    key="game_name_input"
 )
 
-# Remember user selection
-if set_number:
-    st.session_state["set_number"] = set_number
-elif "set_number" in st.session_state:
-    set_number = st.session_state["set_number"]
+st.session_state.set_number = st.selectbox(
+    "🎯 Select Set Number (optional)",
+    ["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"],
+    index=["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"].index(st.session_state.set_number)
+    if st.session_state.set_number in ["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"] else 0,
+    key="set_number_select"
+)
 
 # ---------------- HELPER ----------------
 def horizontal_radio(label, options, session_key):
-    selected = st.session_state.get(session_key)
+    """Creates a radio button that persists in session_state."""
+    current_value = st.session_state.get(session_key, options[0])
     value = st.radio(
         label,
         options,
-        index=options.index(selected) if selected in options else 0,
-        horizontal=True
+        index=options.index(current_value) if current_value in options else 0,
+        horizontal=True,
+        key=session_key  # <-- Key ensures persistence automatically
     )
     st.session_state[session_key] = value
     return value
 
 # ---------------- PLAYER SELECTION ----------------
-player = horizontal_radio("### 🏐 Select Player", ["Ori","Ofir","Beni","Hillel","Shak","Omer Saar","Omer","Karat","Lior","Yonatan","Ido","Royi"], "selected_player")
+player = horizontal_radio("### 🏐 Select Player", 
+    ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
+    "selected_player"
+)
 
 # ---------------- EVENT SELECTION ----------------
-event = horizontal_radio("### ⚡ Select Event", ["Serve","Attack","Block","Receive","Dig","Set","Defense"], "selected_event")
+event = horizontal_radio("### ⚡ Select Event", 
+    ["", "Serve", "Attack", "Block", "Receive", "Dig", "Set", "Defense"], 
+    "selected_event"
+)
 
 # ---------------- SUBCHOICES ----------------
 attack_type = None
@@ -82,9 +92,9 @@ event_outcomes = {
 }
 
 if event == "Attack":
-    attack_type = horizontal_radio("### ⚡ Attack Type", ["Free Ball", "Tip", "Hole", "Spike"], "attack_type")
+    attack_type = horizontal_radio("### ⚡ Attack Type", ["", "Free Ball", "Tip", "Hole", "Spike"], "attack_type")
 elif event == "Set":
-    set_to = horizontal_radio("### 🧱 Set To", ["Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
+    set_to = horizontal_radio("### 🧱 Set To", ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
 
 # ---------------- OUTCOME ----------------
 base_outcomes = event_outcomes.get(event, [])
@@ -93,7 +103,10 @@ if event == "Attack" and st.session_state.get("attack_type") == "Spike":
 else:
     outcome_options = base_outcomes
 
-outcome = horizontal_radio("### 🎯 Select Outcome", outcome_options, "selected_outcome") if outcome_options else None
+outcome = (
+    horizontal_radio("### 🎯 Select Outcome", [""] + outcome_options, "selected_outcome")
+    if outcome_options else None
+)
 
 # ---------------- SAVE EVENT ----------------
 def save_event():
@@ -102,27 +115,25 @@ def save_event():
         "player": player,
         "event": f"{event} ({extra_info})" if extra_info else event,
         "outcome": outcome,
-        "video_url": video_url,
-        "game_name": game_name,
-        "set_number": set_number if set_number else None
+        "video_url": st.session_state.video_url,
+        "game_name": st.session_state.game_name,
+        "set_number": st.session_state.set_number if st.session_state.set_number else None
     }
+
     response = requests.post(f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}", headers=HEADERS, data=json.dumps(data))
     if response.status_code in [200, 201]:
-        st.success(f"Saved: {player} | {event} | {extra_info if extra_info else ''} | {outcome}")
-        for key in ["selected_player","selected_event","selected_outcome","attack_type","set_to"]:
-            st.session_state[key] = None
+        st.success(f"✅ Saved: {player} | {event} | {extra_info if extra_info else ''} | {outcome}")
     else:
-        st.error(f"Failed to save: {response.text}")
+        st.error(f"❌ Failed to save: {response.text}")
 
 if st.button("💾 Save Event", use_container_width=True):
     if player and event and outcome:
         save_event()
     else:
-        st.error("Please select a player, event, and outcome before saving.")
+        st.error("⚠️ Please select a player, event, and outcome before saving.")
 
 # ---------------- LOGGED EVENTS ----------------
 def load_events():
-    query = f"SELECT * FROM {TABLE_NAME} ORDER BY id DESC"
     response = requests.get(f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?select=*", headers=HEADERS)
     if response.status_code == 200:
         return pd.DataFrame(response.json())
@@ -142,7 +153,7 @@ if not df.empty:
             df = df[df["player"].isin(sel_player)]
         if sel_event:
             df = df[df["event"].isin(sel_event)]
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df.drop(columns=["timestamp"], errors="ignore"), use_container_width=True)
     st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
 else:
     st.info("No events logged yet.")
