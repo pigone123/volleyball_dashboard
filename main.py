@@ -51,7 +51,7 @@ def horizontal_radio(label, options, session_key):
 player = horizontal_radio("### 🏐 Select Player", ["Ori","Ofir","Beni","Hillel","Shak","Omer Saar","Omer","Karat","Lior","Yonatan","Ido","Royi"], "selected_player")
 
 # ---------------- EVENT SELECTION ----------------
-event = horizontal_radio("### ⚡ Select Event", ["Serve","Attack","Block","Receive","Dig","Set"], "selected_event")
+event = horizontal_radio("### ⚡ Select Event", ["Serve","Attack","Block","Receive","Dig","Set","Defense"], "selected_event")
 
 # ---------------- SUBCHOICES ----------------
 attack_type = None
