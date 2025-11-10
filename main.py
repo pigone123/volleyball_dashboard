@@ -6,9 +6,9 @@ import os
 import json
 
 # ---------------- SUPABASE CONFIG ----------------
-SUPABASE_URL = st.secrets["SUPABASE"]["URL"]  # e.g. "https://xxxx.supabase.co"
-SUPABASE_KEY = st.secrets["SUPABASE"]["KEY"]  # anon/public key
-TABLE_NAME = "events"  # make sure you create this table in Supabase
+SUPABASE_URL = st.secrets["SUPABASE"]["URL"] 
+SUPABASE_KEY = st.secrets["SUPABASE"]["KEY"] 
+TABLE_NAME = "Volleyball_events"
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
