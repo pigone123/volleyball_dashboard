@@ -60,10 +60,10 @@ def horizontal_radio(label, options, session_key):
         options,
         index=options.index(current_value) if current_value in options else 0,
         horizontal=True,
-        key=session_key  # <-- Key ensures persistence automatically
+        key=session_key  # this already syncs to st.session_state
     )
-    st.session_state[session_key] = value
     return value
+
 
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
