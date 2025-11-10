@@ -19,9 +19,10 @@ HEADERS = {
 # ---------------- STREAMLIT CONFIG ----------------
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
 
-for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to", "game_name"]:
+for key in ["selected_player", "selected_event", "selected_outcome", "attack_type", "set_to", "game_name", "set_number"]:
     if key not in st.session_state:
         st.session_state[key] = None
+
 
 # ---------------- VIDEO INPUT ----------------
 video_url = st.text_input("🎥 YouTube Video URL", placeholder="https://www.youtube.com/watch?v=example")
@@ -34,6 +35,20 @@ if game_name:
     st.session_state["game_name"] = game_name
 elif "game_name" in st.session_state:
     game_name = st.session_state["game_name"]
+
+
+set_number = st.selectbox(
+    "🎯 Select Set Number (optional)",
+    ["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"],
+    index=0 if st.session_state.get("set_number") is None else
+    ["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"].index(st.session_state["set_number"])
+)
+
+# Remember user selection
+if set_number:
+    st.session_state["set_number"] = set_number
+elif "set_number" in st.session_state:
+    set_number = st.session_state["set_number"]
 
 # ---------------- HELPER ----------------
 def horizontal_radio(label, options, session_key):
@@ -89,7 +104,8 @@ def save_event():
         "event": f"{event} ({extra_info})" if extra_info else event,
         "outcome": outcome,
         "video_url": video_url,
-        "game_name": game_name
+        "game_name": game_name,
+        "set_number": set_number if set_number else None
     }
     response = requests.post(f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}", headers=HEADERS, data=json.dumps(data))
     if response.status_code in [200, 201]:
