@@ -11,7 +11,8 @@ def get_connection():
         password=st.secrets["postgres"]["PASSWORD"],
         host=st.secrets["postgres"]["HOST"],
         port=st.secrets["postgres"]["PORT"],
-        dbname=st.secrets["postgres"]["DBNAME"]
+        dbname=st.secrets["postgres"]["DBNAME"],
+        sslmode="require"  # <--- this is important for Supabase
     )
 
 def safe_execute(cursor, conn, query, params=()):
