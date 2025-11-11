@@ -155,6 +155,10 @@ if st.button("💾 Save Event", use_container_width=True):
 # ---------------- LOGGED EVENTS ----------------
 df = load_events()
 if not df.empty:
+    if "timestamp" in df.columns:
+        df = df.sort_values("timestamp", ascending=False)
+    else:
+        df = df.sort_values("id", ascending=False)
     with st.expander("🔍 Filter"):
         sel_game = st.multiselect("Game", df["game_name"].dropna().unique())
         sel_player = st.multiselect("Player", df["player"].unique())
