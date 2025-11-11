@@ -53,48 +53,23 @@ st.session_state.set_number = st.selectbox(
 
 # ---------------- HELPER ----------------
 def horizontal_buttons(label, options, session_key):
-    """Creates a horizontal button group that behaves like radio buttons."""
+    """Creates a horizontal button group that behaves like radio buttons with a highlight."""
     st.markdown(f"#### {label}")
+
     cols = st.columns(len(options))
     selected = st.session_state.get(session_key, options[0])
 
-    # Add custom CSS for highlighting
-    st.markdown("""
-        <style>
-        div[data-testid="column"] button[kind="secondary"] {
-            border-radius: 10px;
-            padding: 0.5rem 1rem;
-            margin: 0.2rem;
-            border: 1px solid #ccc;
-            transition: all 0.2s ease-in-out;
-        }
-        div[data-testid="column"] button[kind="secondary"]:hover {
-            background-color: #f0f2f6;
-            border-color: #aaa;
-        }
-        div[data-testid="column"] button[selected="true"] {
-            background-color: #00b4d8 !important;
-            color: white !important;
-            border-color: #0096c7 !important;
-            font-weight: bold;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
     for i, opt in enumerate(options):
-        is_selected = (opt == selected)
         button_label = opt if opt else "—"
-        button_placeholder = cols[i].empty()
-        if button_placeholder.button(button_label, key=f"{session_key}_{i}", use_container_width=True):
+        # Highlight the selected option by changing the label style
+        if opt == selected:
+            button_label = f"✅ {button_label}"
+        if cols[i].button(button_label, key=f"{session_key}_{i}"):
             st.session_state[session_key] = opt
-            st.rerun()
-        # Inject custom attribute for highlighting (works by DOM attribute)
-        st.markdown(
-            f"<script>var btn = window.parent.document.querySelectorAll('button[kind=\"secondary\"]')[{i}]; if (btn && '{str(is_selected).lower()}'=='true') btn.setAttribute('selected', 'true');</script>",
-            unsafe_allow_html=True,
-        )
 
+    st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
     return st.session_state.get(session_key, options[0])
+
 
 
 # ---------------- PLAYER SELECTION ----------------
