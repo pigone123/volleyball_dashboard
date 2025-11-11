@@ -53,7 +53,7 @@ st.session_state.set_number = st.selectbox(
 
 # ---------------- HELPER ----------------
 def horizontal_buttons(label, options, session_key):
-    """Creates a horizontal button group that behaves like radio buttons with a highlight."""
+    """Horizontal buttons that behave like radio buttons with instant highlight."""
     st.markdown(f"#### {label}")
 
     cols = st.columns(len(options))
@@ -61,11 +61,12 @@ def horizontal_buttons(label, options, session_key):
 
     for i, opt in enumerate(options):
         button_label = opt if opt else "—"
-        # Highlight the selected option by changing the label style
+        # Add a checkmark for selected button
         if opt == selected:
             button_label = f"✅ {button_label}"
         if cols[i].button(button_label, key=f"{session_key}_{i}"):
             st.session_state[session_key] = opt
+            st.experimental_rerun()  # immediately rerun app to reflect the selection
 
     st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
     return st.session_state.get(session_key, options[0])
