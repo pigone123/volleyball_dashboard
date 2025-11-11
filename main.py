@@ -53,31 +53,23 @@ st.session_state.set_number = st.selectbox(
 
 # ---------------- HELPER ----------------
 def horizontal_buttons(label, options, session_key):
-    """
-    Horizontal buttons that behave like radio buttons with checkmark ✅.
-    Works on first click without st.experimental_rerun.
-    """
+    """Creates a horizontal button group that behaves like radio buttons with a highlight."""
     st.markdown(f"#### {label}")
 
-    # Initialize session state
-    if session_key not in st.session_state:
-        st.session_state[session_key] = options[0]
-
     cols = st.columns(len(options))
+    selected = st.session_state.get(session_key, options[0])
 
-    # Render buttons
     for i, opt in enumerate(options):
-        display_label = opt if opt else "—"
-        if st.session_state[session_key] == opt and opt != "":
-            display_label = f"✅ {display_label}"
-
-        # Clicking updates session_state immediately
-        if cols[i].button(display_label, key=f"{session_key}_{i}"):
+        button_label = opt if opt else "—"
+        # Highlight the selected option by changing the label style
+        if opt == selected:
+            button_label = f"✅ {button_label}"
+        if cols[i].button(button_label, key=f"{session_key}_{i}"):
             st.session_state[session_key] = opt
 
-    # Always return current value from session_state
-    st.markdown(f"**Selected:** {st.session_state[session_key]}")
-    return st.session_state[session_key]
+    st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
+    return st.session_state.get(session_key, options[0])
+
 
 
 # ---------------- PLAYER SELECTION ----------------
