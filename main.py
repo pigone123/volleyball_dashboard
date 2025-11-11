@@ -141,19 +141,80 @@ def load_events():
         st.error(f"Failed to load events: {response.text}")
         return pd.DataFrame()
 
+def update_event(row_id, updated_row):
+    """Update a row in Supabase by ID."""
+    url = f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}"
+    response = requests.patch(url, headers=HEADERS, data=json.dumps(updated_row))
+    if response.status_code in [200, 204]:
+        st.toast(f"✅ Row {row_id} updated!", icon="✅")
+    else:
+        st.error(f"❌ Failed to update row {row_id}: {response.text}")
+
+def delete_event(row_id):
+    """Delete a row in Supabase by ID."""
+    url = f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}"
+    response = requests.delete(url, headers=HEADERS)
+    if response.status_code in [200, 204]:
+        st.toast(f"🗑️ Row {row_id} deleted!", icon="🗑️")
+    else:
+        st.error(f"❌ Failed to delete row {row_id}: {response.text}")
+
 df = load_events()
+
 if not df.empty:
     with st.expander("🔍 Filter"):
         sel_game = st.multiselect("Game", df["game_name"].dropna().unique())
         sel_player = st.multiselect("Player", df["player"].unique())
         sel_event = st.multiselect("Event", df["event"].unique())
+
         if sel_game:
             df = df[df["game_name"].isin(sel_game)]
         if sel_player:
             df = df[df["player"].isin(sel_player)]
         if sel_event:
             df = df[df["event"].isin(sel_event)]
-    st.dataframe(df.drop(columns=["timestamp"], errors="ignore"), use_container_width=True)
-    st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
+
+    st.write("### ✏️ Edit or Delete Logged Events")
+
+    # Remove unneeded columns
+    df_display = df.drop(columns=["timestamp"], errors="ignore")
+
+    # Create editable table
+    edited_df = st.data_editor(
+        df_display,
+        num_rows="fixed",
+        use_container_width=True,
+        key="editor"
+    )
+
+    # Detect and save edits
+    if st.button("💾 Save All Changes", use_container_width=True):
+        for i, row in edited_df.iterrows():
+            original = df.loc[df["id"] == row["id"]].iloc[0]
+            changed_cols = {col: row[col] for col in df.columns if col in row and row[col] != original[col]}
+            if changed_cols:
+                update_event(row["id"], changed_cols)
+
+    # Inline delete buttons
+    st.divider()
+    st.subheader("🗑️ Delete Individual Rows")
+    for _, row in df.iterrows():
+        cols = st.columns([8, 1])
+        with cols[0]:
+            st.markdown(f"**{row['id']}** — {row['player']} | {row['event']} | {row['outcome']}")
+        with cols[1]:
+            if st.button("❌", key=f"del_{row['id']}"):
+                delete_event(row["id"])
+                st.rerun()
+
+    # CSV download
+    st.divider()
+    st.download_button(
+        "⬇️ Download CSV",
+        df.to_csv(index=False).encode("utf-8"),
+        "volleyball_events.csv",
+        "text/csv"
+    )
+
 else:
     st.info("No events logged yet.")
