@@ -203,15 +203,16 @@ def refresh_table(_, __):
 # ---------------- Apply Filters ----------------
 @app.callback(
     Output("events_table", "data"),
-    Input({"type": "filter-dropdown", "index": ALL}, "value"),
-    prevent_initial_call=True
+    Input({"type": "filter-dropdown", "index": ALL}, "value")
 )
-def apply_filters(filters):
+def apply_filters(selected_values):
     df = load_events()
-    for i, f in enumerate(filters):
-        if f:
-            col = list(df.columns)[i]
-            df = df[df[col] == f]
+    filter_columns = [col for col in df.columns if col != "id"]
+    
+    for col, selected in zip(filter_columns, selected_values):
+        if selected:
+            df = df[df[col] == selected]
+    
     return df.to_dict("records")
 
 # ---------------- Save Changes Button ----------------
