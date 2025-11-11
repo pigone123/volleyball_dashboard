@@ -55,30 +55,28 @@ st.session_state.set_number = st.selectbox(
 def horizontal_buttons(label, options, session_key):
     """
     Horizontal buttons that behave like radio buttons with checkmark ✅.
-    Works on first click.
+    Works on first click without st.experimental_rerun.
     """
     st.markdown(f"#### {label}")
 
+    # Initialize session state
     if session_key not in st.session_state:
         st.session_state[session_key] = options[0]
 
     cols = st.columns(len(options))
-    selection_changed = False
 
+    # Render buttons
     for i, opt in enumerate(options):
-        button_label = opt if opt else "—"
+        display_label = opt if opt else "—"
         if st.session_state[session_key] == opt and opt != "":
-            button_label = f"✅ {button_label}"
+            display_label = f"✅ {display_label}"
 
-        if cols[i].button(button_label, key=f"{session_key}_{i}"):
-            if st.session_state[session_key] != opt:
-                st.session_state[session_key] = opt
-                selection_changed = True
+        # Clicking updates session_state immediately
+        if cols[i].button(display_label, key=f"{session_key}_{i}"):
+            st.session_state[session_key] = opt
 
-    if selection_changed:
-        st.experimental_rerun()  # force immediate UI update
-
-    st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
+    # Always return current value from session_state
+    st.markdown(f"**Selected:** {st.session_state[session_key]}")
     return st.session_state[session_key]
 
 
