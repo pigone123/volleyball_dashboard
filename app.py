@@ -37,9 +37,9 @@ EVENT_OUTCOMES = {
     "Defense": ["Good", "Neutral", "Bad"]
 }
 
-# ---------------- HELPER COMPONENTS ----------------
-def create_button_group(name, options, prefix):
-    """Creates a horizontal button group for selections."""
+# ---------------- HELPER ----------------
+def create_button_group(name, options, prefix, selected=None):
+    """Create horizontal buttons with highlighting based on selected value."""
     return html.Div(
         [
             html.Label(name, style={"fontWeight": "bold", "marginBottom": "6px"}),
@@ -48,14 +48,14 @@ def create_button_group(name, options, prefix):
                     dbc.Button(
                         opt,
                         id={"type": prefix, "index": opt},
-                        color="secondary",
-                        outline=True,
+                        color="primary" if opt == selected else "secondary",
+                        outline=False,
                         className="m-1",
                         n_clicks=0,
                     )
                     for opt in options
                 ],
-                className="d-flex flex-wrap",
+                className="d-flex flex-wrap"
             ),
         ],
         className="my-2",
@@ -94,8 +94,15 @@ app.layout = dbc.Container([
         ], width=6)
     ], className="my-3"),
 
-    create_button_group("🏐 Select Player", PLAYERS, "player"),
-    create_button_group("⚡ Select Event", EVENTS, "event"),
+    # Stores for selections
+    dcc.Store(id="store_player", data=""),
+    dcc.Store(id="store_event", data=""),
+    dcc.Store(id="store_attack_type", data=""),
+    dcc.Store(id="store_set_to", data=""),
+    dcc.Store(id="store_outcome", data=""),
+
+    html.Div(id="player_buttons"),
+    html.Div(id="event_buttons"),
     html.Div(id="subchoice_buttons"),
     html.Div(id="outcome_buttons"),
     html.Div(id="selection_summary", className="my-3 fw-bold"),
@@ -110,132 +117,123 @@ app.layout = dbc.Container([
 ], fluid=True)
 
 # ---------------- CALLBACKS ----------------
-@app.callback(
-    Output("video_player", "children"),
-    Input("video_url", "value")
-)
+
+# Video
+@app.callback(Output("video_player", "children"), Input("video_url", "value"))
 def update_video(url):
     if url:
         return html.Iframe(src=url.replace("watch?v=", "embed/"), width="100%", height="360")
     return ""
 
+# Render player and event buttons
+@app.callback(
+    Output("player_buttons", "children"),
+    Output("event_buttons", "children"),
+    Input("store_player", "data"),
+    Input("store_event", "data")
+)
+def render_buttons(player_sel, event_sel):
+    return create_button_group("🏐 Select Player", PLAYERS, "player", player_sel), \
+           create_button_group("⚡ Select Event", EVENTS, "event", event_sel)
+
 # Update subchoice buttons based on event selection
 @app.callback(
     Output("subchoice_buttons", "children"),
-    Input({"type": "event", "index": ALL}, "n_clicks"),
-    prevent_initial_call=True
+    Input("store_event", "data"),
+    Input("store_attack_type", "data"),
+    Input("store_set_to", "data")
 )
-def update_subchoice(event_clicks):
-    ctx_id = ctx.triggered_id
-    if not ctx_id:
-        return ""
-    event_selected = ctx_id["index"]
-    if event_selected == "Attack":
-        return create_button_group("⚡ Attack Type", ATTACK_TYPES, "attack_type")
-    elif event_selected == "Set":
-        return create_button_group("🧱 Set To", SET_TO, "set_to")
+def update_subchoice(event_sel, attack_sel, set_sel):
+    if event_sel == "Attack":
+        return create_button_group("⚡ Attack Type", ATTACK_TYPES, "attack_type", attack_sel)
+    elif event_sel == "Set":
+        return create_button_group("🧱 Set To", SET_TO, "set_to", set_sel)
     return ""
 
-# Update outcome buttons based on event/attack_type selection
+# Update outcome buttons
 @app.callback(
     Output("outcome_buttons", "children"),
-    Input({"type": "event", "index": ALL}, "n_clicks"),
-    Input({"type": "attack_type", "index": ALL}, "n_clicks"),
-    Input({"type": "set_to", "index": ALL}, "n_clicks"),
-    prevent_initial_call=True
+    Input("store_event", "data"),
+    Input("store_attack_type", "data"),
+    Input("store_set_to", "data"),
+    Input("store_outcome", "data")
 )
-def update_outcome(event_clicks, attack_clicks, set_clicks):
-    triggered = ctx.triggered_id
-    event_selected = triggered["index"] if triggered and triggered["type"] == "event" else None
-    attack_selected = triggered["index"] if triggered and triggered["type"] == "attack_type" else None
-    set_selected = triggered["index"] if triggered and triggered["type"] == "set_to" else None
-
-    event = event_selected or ("Attack" if attack_selected else "Set" if set_selected else None)
-    if not event:
+def update_outcome(event_sel, attack_sel, set_sel, outcome_sel):
+    if not event_sel:
         return ""
-    base_outcomes = EVENT_OUTCOMES.get(event, [])
-    if event == "Attack" and attack_selected == "Spike":
+    base_outcomes = EVENT_OUTCOMES.get(event_sel, [])
+    if event_sel == "Attack" and attack_sel == "Spike":
         base_outcomes += ["Hard Blocked", "Soft Blocked", "Kill"]
-    return create_button_group("🎯 Select Outcome", base_outcomes, "outcome")
+    return create_button_group("🎯 Select Outcome", base_outcomes, "outcome", outcome_sel)
 
-# Highlight clicked buttons in each group
+# Handle selections for all groups
 @app.callback(
-    Output({"type": "player", "index": ALL}, "color"),
-    Output({"type": "event", "index": ALL}, "color"),
-    Output({"type": "attack_type", "index": ALL}, "color"),
-    Output({"type": "set_to", "index": ALL}, "color"),
-    Output({"type": "outcome", "index": ALL}, "color"),
+    Output("store_player", "data"),
+    Output("store_event", "data"),
+    Output("store_attack_type", "data"),
+    Output("store_set_to", "data"),
+    Output("store_outcome", "data"),
     Input({"type": "player", "index": ALL}, "n_clicks"),
     Input({"type": "event", "index": ALL}, "n_clicks"),
     Input({"type": "attack_type", "index": ALL}, "n_clicks"),
     Input({"type": "set_to", "index": ALL}, "n_clicks"),
     Input({"type": "outcome", "index": ALL}, "n_clicks"),
-    prevent_initial_call=True
+    State("store_player", "data"),
+    State("store_event", "data"),
+    State("store_attack_type", "data"),
+    State("store_set_to", "data"),
+    State("store_outcome", "data"),
 )
-def update_button_colors(player_clicks, event_clicks, attack_clicks, set_clicks, outcome_clicks):
-    def highlight_group(clicks):
-        if not clicks:
-            return []
-        max_idx = max((i for i, c in enumerate(clicks) if c), default=None)
-        return ["primary" if i == max_idx else "secondary" for i in range(len(clicks))]
+def update_stores(p_clicks, e_clicks, a_clicks, s_clicks, o_clicks,
+                  player_sel, event_sel, attack_sel, set_sel, outcome_sel):
+    def get_clicked(options, clicks, current):
+        for opt, c in zip(options, clicks):
+            if c:
+                return opt
+        return current
 
-    return (
-        highlight_group(player_clicks),
-        highlight_group(event_clicks),
-        highlight_group(attack_clicks),
-        highlight_group(set_clicks),
-        highlight_group(outcome_clicks)
-    )
+    player_sel = get_clicked(PLAYERS, p_clicks, player_sel)
+    event_sel = get_clicked(EVENTS, e_clicks, event_sel)
+    attack_sel = get_clicked(ATTACK_TYPES, a_clicks, attack_sel)
+    set_sel = get_clicked(SET_TO, s_clicks, set_sel)
+    outcome_sel = get_clicked(EVENT_OUTCOMES.get(event_sel, []), o_clicks, outcome_sel)
 
-# Handle selection summary + save
+    return player_sel, event_sel, attack_sel, set_sel, outcome_sel
+
+# Save event
 @app.callback(
-    Output("selection_summary", "children"),
     Output("save_status", "children"),
-    Input({"type": "player", "index": ALL}, "n_clicks"),
-    Input({"type": "event", "index": ALL}, "n_clicks"),
-    Input({"type": "attack_type", "index": ALL}, "n_clicks"),
-    Input({"type": "set_to", "index": ALL}, "n_clicks"),
-    Input({"type": "outcome", "index": ALL}, "n_clicks"),
+    Output("selection_summary", "children"),
     Input("save_event", "n_clicks"),
+    State("store_player", "data"),
+    State("store_event", "data"),
+    State("store_attack_type", "data"),
+    State("store_set_to", "data"),
+    State("store_outcome", "data"),
     State("video_url", "value"),
     State("game_name", "value"),
     State("set_number", "value"),
     prevent_initial_call=True
 )
-def handle_selection(players, events, attack_types, set_tos, outcomes, save_click, video_url, game_name, set_number):
-    triggered = ctx.triggered_id
-    save_status = ""
+def save_event_callback(n, player_sel, event_sel, attack_sel, set_sel, outcome_sel, video_url, game_name, set_number):
+    extra = attack_sel or set_sel
+    summary = f"Selected: {player_sel or '–'} | {event_sel or '–'} | {extra or '–'} | {outcome_sel or '–'}"
+    if player_sel and event_sel and outcome_sel:
+        data = {
+            "player": player_sel,
+            "event": f"{event_sel} ({extra})" if extra else event_sel,
+            "outcome": outcome_sel,
+            "video_url": video_url,
+            "game_name": game_name,
+            "set_number": set_number if set_number else None
+        }
+        success = save_event(data)
+        if success:
+            return dbc.Alert("✅ Event saved!", color="success"), summary
+        return dbc.Alert("❌ Failed to save.", color="danger"), summary
+    return dbc.Alert("⚠️ Please select all fields before saving.", color="warning"), summary
 
-    selected_player = next((btn["index"] for btn, c in zip(ctx.inputs_list[0], players) if c), "")
-    selected_event = next((btn["index"] for btn, c in zip(ctx.inputs_list[1], events) if c), "")
-    selected_attack_type = next((btn["index"] for btn, c in zip(ctx.inputs_list[2], attack_types) if c), "")
-    selected_set_to = next((btn["index"] for btn, c in zip(ctx.inputs_list[3], set_tos) if c), "")
-    selected_outcome = next((btn["index"] for btn, c in zip(ctx.inputs_list[4], outcomes) if c), "")
-
-    if triggered == "save_event":
-        event = selected_event
-        extra = selected_attack_type or selected_set_to
-        if selected_player and event and selected_outcome:
-            data = {
-                "player": selected_player,
-                "event": f"{event} ({extra})" if extra else event,
-                "outcome": selected_outcome,
-                "video_url": video_url,
-                "game_name": game_name,
-                "set_number": set_number if set_number else None
-            }
-            success = save_event(data)
-            if success:
-                save_status = dbc.Alert("✅ Event saved!", color="success")
-            else:
-                save_status = dbc.Alert("❌ Failed to save.", color="danger")
-        else:
-            save_status = dbc.Alert("⚠️ Please select all fields before saving.", color="warning")
-
-    summary = f"Selected: {selected_player or '–'} | {selected_event or '–'} | {selected_attack_type or selected_set_to or '–'} | {selected_outcome or '–'}"
-    return summary, save_status
-
-# Refresh events table
+# Refresh logged events table
 @app.callback(
     Output("events_table_div", "children"),
     Input("refresh_table", "n_intervals")
