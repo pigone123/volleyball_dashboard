@@ -65,6 +65,7 @@ def horizontal_buttons(label, options, session_key):
     cols = st.columns(len(options))
     selection_changed = False
 
+    # Render buttons
     for i, opt in enumerate(options):
         button_label = opt if opt else "—"
         if st.session_state[session_key] == opt and opt != "":
@@ -75,10 +76,13 @@ def horizontal_buttons(label, options, session_key):
                 st.session_state[session_key] = opt
                 selection_changed = True
 
+    # Call rerun AFTER all buttons are rendered
     if selection_changed:
-        st.experimental_rerun()  # force immediate update after a new selection
+        # Use a small delay to avoid Streamlit re-render conflicts (optional)
+        st.experimental_rerun()
 
     st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
+
 
 
 
