@@ -1,4 +1,4 @@
-streamlit
+dash
+dash-bootstrap-components
 pandas
-psycopg2-binary
-python-dotenv
+requests
