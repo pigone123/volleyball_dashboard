@@ -119,9 +119,11 @@ event_outcomes = {
 }
 
 if event == "Attack":
-    attack_type = horizontal_radio("### ⚡ Attack Type", ["", "Free Ball", "Tip", "Hole", "Spike"], "attack_type")
+    horizontal_buttons("⚡ Attack Type", ["", "Free Ball", "Tip", "Hole", "Spike"], "attack_type")
+    attack_type = st.session_state["attack_type"]
 elif event == "Set":
-    set_to = horizontal_radio("### 🧱 Set To", ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
+    horizontal_buttons("🧱 Set To", ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
+    set_to = st.session_state["set_to"]
 
 # ---------------- OUTCOME ----------------
 base_outcomes = event_outcomes.get(event, [])
@@ -130,10 +132,9 @@ if event == "Attack" and st.session_state.get("attack_type") == "Spike":
 else:
     outcome_options = base_outcomes
 
-outcome = (
-    horizontal_radio("### 🎯 Select Outcome", [""] + outcome_options, "selected_outcome")
-    if outcome_options else None
-)
+if outcome_options:
+    horizontal_buttons("🎯 Select Outcome", [""] + outcome_options, "selected_outcome")
+outcome = st.session_state.get("selected_outcome", "")
 
 # ---------------- SUPABASE OPS ----------------
 def save_event():
