@@ -155,33 +155,50 @@ def handle_selection(players, events, attack_types, set_tos, outcomes):
 @app.callback(
     Output("events_table_div", "children"),
     Input("refresh_table_btn", "n_clicks"),
-    Input("filter_input", "value")
+    Input("save_event", "n_clicks"),  # refresh when new event saved
 )
-def refresh_table(n_clicks, filter_text):
+def refresh_table(_, __):
     df = load_events()
     if df.empty:
         return html.Div("No events logged yet.")
-    if filter_text:
-        df = df[df.apply(lambda row: row.astype(str).str.contains(filter_text, case=False).any(), axis=1)]
 
+    # Build dropdown filters dynamically for each column except 'id'
+    dropdowns = html.Div(
+        [
+            dcc.Dropdown(
+                id={"type": "filter-dropdown", "index": col},
+                options=[{"label": str(v), "value": v} for v in sorted(df[col].dropna().unique())],
+                placeholder=f"Filter {col}",
+                style={"width": "150px", "margin": "2px"},
+                clearable=True
+            )
+            for col in df.columns if col != "id"
+        ],
+        className="d-flex flex-wrap justify-content-center mb-2"
+    )
+
+    # Build DataTable without "delete" column
     table = dash_table.DataTable(
         id="events_table",
-        columns=[{"name": c, "id": c, "editable": c not in ["id"]} for c in df.columns],
+        columns=[{"name": c, "id": c, "editable": c != "id"} for c in df.columns if c != "delete"],
         data=df.to_dict("records"),
         editable=True,
         row_deletable=True,
-        style_table={"overflowY": "auto", "maxHeight": "400px"},  # fixed height with scroll
+        style_table={"overflowY": "auto", "maxHeight": "400px"},
         style_cell={"textAlign": "left", "minWidth": "100px", "width": "150px"},
         page_action="none"
     )
+
     return html.Div([
+        dropdowns,
         table,
         html.Div(
             dbc.Button("💾 Save Changes", id="save_table_changes", color="primary", className="my-3"),
-            style={"textAlign": "center"}  # centers the button
+            style={"textAlign": "center"}
         ),
         html.Div(id="table_save_status")
     ])
+
 
 # ---------------- Apply Filters ----------------
 @app.callback(
