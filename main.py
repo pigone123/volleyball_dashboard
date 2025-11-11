@@ -55,7 +55,7 @@ st.session_state.set_number = st.selectbox(
 def horizontal_buttons(label, options, session_key):
     """
     Horizontal buttons that behave like radio buttons.
-    Selected button shows a ✅ mark.
+    Selected button shows a ✅ mark and updates immediately on click.
     """
     st.markdown(f"#### {label}")
 
@@ -68,11 +68,14 @@ def horizontal_buttons(label, options, session_key):
         if st.session_state[session_key] == opt:
             button_label = f"✅ {button_label}"
 
-        if cols[i].button(button_label, key=f"{session_key}_{i}"):
-            st.session_state[session_key] = opt
+        with cols[i]:
+            # Wrap each button in a form to ensure immediate update
+            form_key = f"{session_key}_form_{i}"
+            with st.form(form_key):
+                if st.form_submit_button(button_label):
+                    st.session_state[session_key] = opt
 
     st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
-
 
 
 # ---------------- PLAYER SELECTION ----------------
