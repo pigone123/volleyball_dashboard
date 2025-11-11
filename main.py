@@ -82,18 +82,18 @@ def horizontal_buttons(label, options, session_key):
 
 
 # ---------------- PLAYER SELECTION ----------------
-horizontal_buttons("### 🏐 Select Player", 
+player = horizontal_buttons("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
     "selected_player"
 )
-player = st.session_state["selected_player"]
+
 
 # ---------------- EVENT SELECTION ----------------
-horizontal_buttons("### ⚡ Select Event", 
+event = horizontal_buttons("### ⚡ Select Event", 
     ["", "Serve", "Attack", "Block", "Receive", "Dig", "Set", "Defense"], 
     "selected_event"
 )
-event =  st.session_state["selected_event"]
+
 # ---------------- SUBCHOICES ----------------
 attack_type = None
 set_to = None
@@ -109,11 +109,11 @@ event_outcomes = {
 }
 
 if event == "Attack":
-    horizontal_buttons("⚡ Attack Type", ["", "Free Ball", "Tip", "Hole", "Spike"], "attack_type")
-    attack_type = st.session_state["attack_type"]
+    attack_typ = horizontal_buttons("⚡ Attack Type", ["", "Free Ball", "Tip", "Hole", "Spike"], "attack_type")
+    #attack_type = st.session_state["attack_type"]
 elif event == "Set":
-    horizontal_buttons("🧱 Set To", ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
-    set_to = st.session_state["set_to"]
+    set_to = horizontal_buttons("🧱 Set To", ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
+    #set_to = st.session_state["set_to"]
 
 # ---------------- OUTCOME ----------------
 base_outcomes = event_outcomes.get(event, [])
