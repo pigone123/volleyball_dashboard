@@ -152,23 +152,30 @@ if st.button("💾 Save Event", use_container_width=True):
     else:
         st.error("⚠️ Please select a player, event, and outcome before saving.")
 
+
 # ---------------- LOGGED EVENTS ----------------
 df = load_events()
+
 if not df.empty:
-    if "timestamp" in df.columns:
-        df = df.sort_values("timestamp", ascending=False)
-    else:
-        df = df.sort_values("id", ascending=False)
+    # Sort by timestamp or id descending to show newest first
+    sort_col = "timestamp" if "timestamp" in df.columns else "id"
+    df = df.sort_values(sort_col, ascending=False)
+
     with st.expander("🔍 Filter"):
         sel_game = st.multiselect("Game", df["game_name"].dropna().unique())
         sel_player = st.multiselect("Player", df["player"].unique())
         sel_event = st.multiselect("Event", df["event"].unique())
+
+        # Apply filters
         if sel_game:
             df = df[df["game_name"].isin(sel_game)]
         if sel_player:
             df = df[df["player"].isin(sel_player)]
         if sel_event:
             df = df[df["event"].isin(sel_event)]
+
+        # Re-sort after filtering to keep newest on top
+        df = df.sort_values(sort_col, ascending=False)
 
     # -------- Editable + Deletable Table --------
     df_display = df.drop(columns=["timestamp"], errors="ignore").copy()
@@ -199,7 +206,13 @@ if not df.empty:
         st.rerun()
 
     # CSV Export
-    st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
+    st.download_button(
+        "⬇️ Download CSV",
+        df.to_csv(index=False).encode("utf-8"),
+        "volleyball_events.csv",
+        "text/csv"
+    )
 
 else:
     st.info("No events logged yet.")
+
