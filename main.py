@@ -59,26 +59,27 @@ def horizontal_buttons(label, options, session_key):
     """
     st.markdown(f"#### {label}")
 
-    # Initialize session state
     if session_key not in st.session_state:
         st.session_state[session_key] = options[0]
 
     cols = st.columns(len(options))
-    selected_value = st.session_state[session_key]
+    selection_changed = False
 
-    # Render buttons
     for i, opt in enumerate(options):
         button_label = opt if opt else "—"
-        if opt == st.session_state[session_key] and opt != "":
+        if st.session_state[session_key] == opt and opt != "":
             button_label = f"✅ {button_label}"
 
         if cols[i].button(button_label, key=f"{session_key}_{i}"):
-            st.session_state[session_key] = opt
-            selected_value = opt  # update immediately for return
+            if st.session_state[session_key] != opt:
+                st.session_state[session_key] = opt
+                selection_changed = True
 
-    st.markdown(f"**Selected:** {selected_value}")
-    return selected_value
+    if selection_changed:
+        st.experimental_rerun()  # force immediate UI update
 
+    st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
+    return st.session_state[session_key]
 
 
 # ---------------- PLAYER SELECTION ----------------
