@@ -18,7 +18,8 @@ HEADERS = {
 }
 
 # ---------------- DASH APP ----------------
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+
 server = app.server
 
 # ---------------- CONSTANTS ----------------
