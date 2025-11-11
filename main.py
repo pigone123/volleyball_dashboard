@@ -55,24 +55,30 @@ st.session_state.set_number = st.selectbox(
 def horizontal_buttons(label, options, session_key):
     """
     Horizontal buttons with checkmark ✅ for selection.
-    Updates immediately on single click without rerun.
+    Updates immediately on single click.
     """
     st.markdown(f"#### {label}")
 
     if session_key not in st.session_state:
         st.session_state[session_key] = options[0]
 
+    # Precompute button labels based on current selection
+    button_labels = []
+    for opt in options:
+        lbl = opt if opt else "—"
+        if st.session_state[session_key] == opt and opt != "":
+            lbl = f"✅ {lbl}"
+        button_labels.append(lbl)
+
     cols = st.columns(len(options))
 
+    # Render buttons
     for i, opt in enumerate(options):
-        button_label = opt if opt else "—"
-        if st.session_state[session_key] == opt and opt != "":
-            button_label = f"✅ {button_label}"
-
-        if cols[i].button(button_label, key=f"{session_key}_{i}"):
-            st.session_state[session_key] = opt  # update session state
+        if cols[i].button(button_labels[i], key=f"{session_key}_{i}"):
+            st.session_state[session_key] = opt  # update session state immediately
 
     st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
+
 
 
 # ---------------- PLAYER SELECTION ----------------
