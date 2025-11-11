@@ -1,4 +1,3 @@
-# app.py
 import os
 import json
 import requests
@@ -22,10 +21,10 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server  # for deployment
 
 # ---------------- CONSTANTS ----------------
-PLAYERS = ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"]
-EVENTS = ["", "Serve", "Attack", "Block", "Receive", "Dig", "Set", "Defense"]
-ATTACK_TYPES = ["", "Free Ball", "Tip", "Hole", "Spike"]
-SET_TO = ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"]
+PLAYERS = ["Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"]
+EVENTS = ["Serve", "Attack", "Block", "Receive", "Dig", "Set", "Defense"]
+ATTACK_TYPES = ["Free Ball", "Tip", "Hole", "Spike"]
+SET_TO = ["Position 1", "Position 2", "Position 3", "Position 4", "Position 6"]
 
 EVENT_OUTCOMES = {
     "Serve": ["Ace", "Out", "Net", "In", "Off System"],
@@ -36,6 +35,30 @@ EVENT_OUTCOMES = {
     "Set": ["0 Blockers", "1 Blocker", "2 Blocker"],
     "Defense": ["Good", "Neutral", "Bad"]
 }
+
+# ---------------- HELPER COMPONENTS ----------------
+def create_button_group(name, options, prefix):
+    """Creates a horizontal button group for selections."""
+    return html.Div(
+        [
+            html.Label(name, style={"fontWeight": "bold", "marginBottom": "6px"}),
+            html.Div(
+                [
+                    dbc.Button(
+                        opt,
+                        id={"type": prefix, "index": opt},
+                        color="secondary",
+                        outline=True,
+                        className="m-1",
+                        n_clicks=0,
+                    )
+                    for opt in options
+                ],
+                className="d-flex flex-wrap",
+            ),
+        ],
+        className="my-2",
+    )
 
 # ---------------- FUNCTIONS ----------------
 def save_event(data):
@@ -52,19 +75,9 @@ def load_events():
         return df
     return pd.DataFrame()
 
-def update_event(row_id, updated_data):
-    url = f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}"
-    response = requests.patch(url, headers=HEADERS, data=json.dumps(updated_data))
-    return response.status_code in [200, 204]
-
-def delete_event(row_id):
-    url = f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}"
-    response = requests.delete(url, headers=HEADERS)
-    return response.status_code in [200, 204]
-
 # ---------------- LAYOUT ----------------
 app.layout = dbc.Container([
-    html.H1("🏐 Volleyball Event Dashboard", className="my-3"),
+    html.H1("🏐 Volleyball Event Dashboard", className="my-3 text-center"),
 
     dbc.Row([
         dbc.Col([
@@ -80,38 +93,19 @@ app.layout = dbc.Container([
         ], width=6)
     ], className="my-3"),
 
-    dbc.Row([
-        dbc.Col([
-            dbc.Label("🏐 Select Player"),
-            dcc.RadioItems(id="selected_player", options=[{"label": p, "value": p} for p in PLAYERS], value="")
-        ], width=4),
-        dbc.Col([
-            dbc.Label("⚡ Select Event"),
-            dcc.RadioItems(id="selected_event", options=[{"label": e, "value": e} for e in EVENTS], value="")
-        ], width=4),
-        dbc.Col([
-            dbc.Label("⚡ Attack Type / 🧱 Set To"),
-            dcc.RadioItems(id="sub_choice", options=[], value="")
-        ], width=4),
-    ], className="my-3"),
+    create_button_group("🏐 Select Player", PLAYERS, "player"),
+    create_button_group("⚡ Select Event", EVENTS, "event"),
+    html.Div(id="subchoice_buttons"),
+    html.Div(id="outcome_buttons"),
+    html.Div(id="selection_summary", className="my-3 fw-bold"),
 
-    dbc.Row([
-        dbc.Col([
-            dbc.Label("🎯 Select Outcome"),
-            dcc.RadioItems(id="selected_outcome", options=[], value="")
-        ])
-    ], className="my-3"),
-
-    dbc.Row([
-        dbc.Col(dbc.Button("💾 Save Event", id="save_event", color="success"), width=2),
-        dbc.Col(html.Div(id="save_status"), width=10)
-    ], className="my-3"),
+    dbc.Button("💾 Save Event", id="save_event", color="success", className="my-3"),
+    html.Div(id="save_status"),
 
     html.Hr(),
-
     html.H3("Logged Events"),
     html.Div(id="events_table_div"),
-    dcc.Interval(id="refresh_table", interval=5000, n_intervals=0)  # refresh table every 5s
+    dcc.Interval(id="refresh_table", interval=5000, n_intervals=0)
 ], fluid=True)
 
 # ---------------- CALLBACKS ----------------
@@ -125,56 +119,87 @@ def update_video(url):
     return ""
 
 @app.callback(
-    Output("sub_choice", "options"),
-    Output("sub_choice", "value"),
-    Output("selected_outcome", "options"),
-    Output("selected_outcome", "value"),
-    Input("selected_event", "value"),
-    Input("sub_choice", "value")
+    Output("subchoice_buttons", "children"),
+    Input({"type": "event", "index": ALL}, "n_clicks"),
+    prevent_initial_call=True
 )
-def update_sub_choices(event, sub_choice_value):
-    attack_type_opts = [{"label": a, "value": a} for a in ATTACK_TYPES] if event == "Attack" else []
-    set_to_opts = [{"label": s, "value": s} for s in SET_TO] if event == "Set" else []
-    options = attack_type_opts + set_to_opts
-    sub_choice_val = options[0]["value"] if options else ""
-    
-    # Outcome options
-    base_outcomes = EVENT_OUTCOMES.get(event, [])
-    if event == "Attack" and sub_choice_value == "Spike":
-        base_outcomes += ["Hard Blocked", "Soft Blocked", "Kill"]
-    outcome_options = [{"label": o, "value": o} for o in [""] + base_outcomes] if base_outcomes else []
-    outcome_val = outcome_options[0]["value"] if outcome_options else ""
-    
-    return options, sub_choice_val, outcome_options, outcome_val
+def update_subchoice(event_clicks):
+    ctx_id = ctx.triggered_id
+    if not ctx_id:
+        return ""
+    event_selected = ctx_id["index"]
+    if event_selected == "Attack":
+        return create_button_group("⚡ Attack Type", ATTACK_TYPES, "attack_type")
+    elif event_selected == "Set":
+        return create_button_group("🧱 Set To", SET_TO, "set_to")
+    return ""
 
 @app.callback(
+    Output("outcome_buttons", "children"),
+    Input({"type": "event", "index": ALL}, "n_clicks"),
+    Input({"type": "attack_type", "index": ALL}, "n_clicks"),
+    prevent_initial_call=True
+)
+def update_outcome(event_clicks, attack_type_clicks):
+    triggered = ctx.triggered_id
+    event_selected = triggered["index"] if triggered and triggered["type"] == "event" else None
+    attack_type_selected = triggered["index"] if triggered and triggered["type"] == "attack_type" else None
+
+    event = event_selected or (attack_type_selected and "Attack")
+    if not event:
+        return ""
+    base_outcomes = EVENT_OUTCOMES.get(event, [])
+    if event == "Attack" and attack_type_selected == "Spike":
+        base_outcomes += ["Hard Blocked", "Soft Blocked", "Kill"]
+    return create_button_group("🎯 Select Outcome", base_outcomes, "outcome")
+
+# Highlight selection + show summary + save
+@app.callback(
+    Output("selection_summary", "children"),
     Output("save_status", "children"),
+    Input({"type": "player", "index": ALL}, "n_clicks"),
+    Input({"type": "event", "index": ALL}, "n_clicks"),
+    Input({"type": "attack_type", "index": ALL}, "n_clicks"),
+    Input({"type": "set_to", "index": ALL}, "n_clicks"),
+    Input({"type": "outcome", "index": ALL}, "n_clicks"),
     Input("save_event", "n_clicks"),
-    State("selected_player", "value"),
-    State("selected_event", "value"),
-    State("sub_choice", "value"),
-    State("selected_outcome", "value"),
     State("video_url", "value"),
     State("game_name", "value"),
     State("set_number", "value"),
     prevent_initial_call=True
 )
-def save_event_callback(n_clicks, player, event, sub_choice, outcome, video_url, game_name, set_number):
-    if player and event and outcome:
-        extra_info = sub_choice
-        data = {
-            "player": player,
-            "event": f"{event} ({extra_info})" if extra_info else event,
-            "outcome": outcome,
-            "video_url": video_url,
-            "game_name": game_name,
-            "set_number": set_number if set_number else None
-        }
-        success = save_event(data)
-        if success:
-            return dbc.Alert(f"✅ Saved: {player} | {event} | {extra_info if extra_info else ''} | {outcome}", color="success")
-        return dbc.Alert("❌ Failed to save", color="danger")
-    return dbc.Alert("⚠️ Please select player, event, and outcome", color="warning")
+def handle_selection(players, events, attack_types, set_tos, outcomes, save_click, video_url, game_name, set_number):
+    triggered = ctx.triggered_id
+    save_status = ""
+
+    selected_player = next((btn["index"] for btn, c in zip(ctx.inputs_list[0], players) if c), "")
+    selected_event = next((btn["index"] for btn, c in zip(ctx.inputs_list[1], events) if c), "")
+    selected_attack_type = next((btn["index"] for btn, c in zip(ctx.inputs_list[2], attack_types) if c), "")
+    selected_set_to = next((btn["index"] for btn, c in zip(ctx.inputs_list[3], set_tos) if c), "")
+    selected_outcome = next((btn["index"] for btn, c in zip(ctx.inputs_list[4], outcomes) if c), "")
+
+    if triggered == "save_event":
+        event = selected_event
+        extra = selected_attack_type or selected_set_to
+        if selected_player and event and selected_outcome:
+            data = {
+                "player": selected_player,
+                "event": f"{event} ({extra})" if extra else event,
+                "outcome": selected_outcome,
+                "video_url": video_url,
+                "game_name": game_name,
+                "set_number": set_number if set_number else None
+            }
+            success = save_event(data)
+            if success:
+                save_status = dbc.Alert("✅ Event saved!", color="success")
+            else:
+                save_status = dbc.Alert("❌ Failed to save.", color="danger")
+        else:
+            save_status = dbc.Alert("⚠️ Please select all fields before saving.", color="warning")
+
+    summary = f"Selected: {selected_player or '–'} | {selected_event or '–'} | {selected_attack_type or selected_set_to or '–'} | {selected_outcome or '–'}"
+    return summary, save_status
 
 @app.callback(
     Output("events_table_div", "children"),
@@ -184,14 +209,10 @@ def refresh_events_table(n):
     df = load_events()
     if df.empty:
         return html.Div("No events logged yet.")
-    # Add delete checkboxes
     df_display = df.drop(columns=["timestamp"], errors="ignore").copy()
-    df_display["Delete?"] = False
     table = dash_table.DataTable(
-        columns=[{"name": c, "id": c, "editable": c not in ["id"]} for c in df_display.columns],
+        columns=[{"name": c, "id": c} for c in df_display.columns],
         data=df_display.to_dict("records"),
-        row_deletable=True,
-        editable=True,
         style_table={"overflowX": "auto"},
         style_cell={"textAlign": "left"}
     )
@@ -199,4 +220,4 @@ def refresh_events_table(n):
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, host="0.0.0.0", port=8080)
