@@ -52,55 +52,30 @@ st.session_state.set_number = st.selectbox(
 )
 
 # ---------------- HELPER ----------------
-def horizontal_buttons(label, options, session_key, highlight_color="#00b4d8"):
-    """
-    Creates a horizontal button group that behaves like radio buttons.
-    The selected button is highlighted with a background color.
-    """
-    st.markdown(f"#### {label}")
-
-    if session_key not in st.session_state:
-        st.session_state[session_key] = options[0]
-
-    cols = st.columns(len(options))
-    for i, opt in enumerate(options):
-        button_label = opt if opt else "—"
-        # Highlight selected button using HTML + markdown
-        if st.session_state[session_key] == opt:
-            # Colored background for selected
-            button_html = f"""
-            <div style="
-                background-color:{highlight_color};
-                color:white;
-                text-align:center;
-                padding:0.4rem 0.6rem;
-                border-radius:8px;
-                font-weight:bold;
-                cursor:pointer;
-            ">{button_label}</div>
-            """
-            if cols[i].button(button_label, key=f"{session_key}_{i}"):
-                st.session_state[session_key] = opt
-        else:
-            if cols[i].button(button_label, key=f"{session_key}_{i}"):
-                st.session_state[session_key] = opt
-
-    st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
-
+def horizontal_radio(label, options, session_key):
+    """Creates a radio button that persists in session_state."""
+    current_value = st.session_state.get(session_key, options[0])
+    value = st.radio(
+        label,
+        options,
+        index=options.index(current_value) if current_value in options else 0,
+        horizontal=True,
+        key=session_key  # Syncs automatically to session_state
+    )
+    return value
 
 # ---------------- PLAYER SELECTION ----------------
-horizontal_buttons("### 🏐 Select Player", 
+player = horizontal_radio("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
     "selected_player"
 )
-player = st.session_state["selected_player"]
 
 # ---------------- EVENT SELECTION ----------------
-horizontal_buttons("### ⚡ Select Event", 
+event = horizontal_radio("### ⚡ Select Event", 
     ["", "Serve", "Attack", "Block", "Receive", "Dig", "Set", "Defense"], 
     "selected_event"
 )
-event =  st.session_state["selected_event"]
+
 # ---------------- SUBCHOICES ----------------
 attack_type = None
 set_to = None
@@ -116,11 +91,9 @@ event_outcomes = {
 }
 
 if event == "Attack":
-    attack_typ = horizontal_buttons("⚡ Attack Type", ["", "Free Ball", "Tip", "Hole", "Spike"], "attack_type")
-    #attack_type = st.session_state["attack_type"]
+    attack_type = horizontal_radio("### ⚡ Attack Type", ["", "Free Ball", "Tip", "Hole", "Spike"], "attack_type")
 elif event == "Set":
-    set_to = horizontal_buttons("🧱 Set To", ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
-    #set_to = st.session_state["set_to"]
+    set_to = horizontal_radio("### 🧱 Set To", ["", "Position 1", "Position 2", "Position 3", "Position 4", "Position 6"], "set_to")
 
 # ---------------- OUTCOME ----------------
 base_outcomes = event_outcomes.get(event, [])
@@ -129,9 +102,10 @@ if event == "Attack" and st.session_state.get("attack_type") == "Spike":
 else:
     outcome_options = base_outcomes
 
-if outcome_options:
-    horizontal_buttons("🎯 Select Outcome", [""] + outcome_options, "selected_outcome")
-outcome = st.session_state.get("selected_outcome", "")
+outcome = (
+    horizontal_radio("### 🎯 Select Outcome", [""] + outcome_options, "selected_outcome")
+    if outcome_options else None
+)
 
 # ---------------- SUPABASE OPS ----------------
 def save_event():
