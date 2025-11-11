@@ -60,10 +60,9 @@ def horizontal_radio(label, options, session_key):
         options,
         index=options.index(current_value) if current_value in options else 0,
         horizontal=True,
-        key=session_key  # this already syncs to st.session_state
+        key=session_key  # Syncs automatically to session_state
     )
     return value
-
 
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
@@ -108,7 +107,7 @@ outcome = (
     if outcome_options else None
 )
 
-# ---------------- SAVE EVENT ----------------
+# ---------------- SUPABASE OPS ----------------
 def save_event():
     extra_info = attack_type if attack_type else set_to
     data = {
@@ -126,13 +125,6 @@ def save_event():
     else:
         st.error(f"❌ Failed to save: {response.text}")
 
-if st.button("💾 Save Event", use_container_width=True):
-    if player and event and outcome:
-        save_event()
-    else:
-        st.error("⚠️ Please select a player, event, and outcome before saving.")
-
-# ---------------- LOGGED EVENTS ----------------
 def load_events():
     response = requests.get(f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?select=*", headers=HEADERS)
     if response.status_code == 200:
@@ -141,32 +133,32 @@ def load_events():
         st.error(f"Failed to load events: {response.text}")
         return pd.DataFrame()
 
-def update_event(row_id, updated_row):
-    """Update a row in Supabase by ID."""
+def update_event(row_id, updated_data):
     url = f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}"
-    response = requests.patch(url, headers=HEADERS, data=json.dumps(updated_row))
-    if response.status_code in [200, 204]:
-        st.toast(f"✅ Row {row_id} updated!", icon="✅")
-    else:
+    response = requests.patch(url, headers=HEADERS, data=json.dumps(updated_data))
+    if response.status_code not in [200, 204]:
         st.error(f"❌ Failed to update row {row_id}: {response.text}")
 
 def delete_event(row_id):
-    """Delete a row in Supabase by ID."""
     url = f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}"
     response = requests.delete(url, headers=HEADERS)
-    if response.status_code in [200, 204]:
-        st.toast(f"🗑️ Row {row_id} deleted!", icon="🗑️")
-    else:
+    if response.status_code not in [200, 204]:
         st.error(f"❌ Failed to delete row {row_id}: {response.text}")
 
-df = load_events()
+# ---------------- SAVE BUTTON ----------------
+if st.button("💾 Save Event", use_container_width=True):
+    if player and event and outcome:
+        save_event()
+    else:
+        st.error("⚠️ Please select a player, event, and outcome before saving.")
 
+# ---------------- LOGGED EVENTS ----------------
+df = load_events()
 if not df.empty:
     with st.expander("🔍 Filter"):
         sel_game = st.multiselect("Game", df["game_name"].dropna().unique())
         sel_player = st.multiselect("Player", df["player"].unique())
         sel_event = st.multiselect("Event", df["event"].unique())
-
         if sel_game:
             df = df[df["game_name"].isin(sel_game)]
         if sel_player:
@@ -174,47 +166,36 @@ if not df.empty:
         if sel_event:
             df = df[df["event"].isin(sel_event)]
 
-    st.write("### ✏️ Edit or Delete Logged Events")
+    # -------- Editable + Deletable Table --------
+    df_display = df.drop(columns=["timestamp"], errors="ignore").copy()
+    df_display["Delete?"] = False  # Add a checkbox column
 
-    # Remove unneeded columns
-    df_display = df.drop(columns=["timestamp"], errors="ignore")
-
-    # Create editable table
     edited_df = st.data_editor(
         df_display,
         num_rows="fixed",
         use_container_width=True,
-        key="editor"
+        key="editor",
     )
 
-    # Detect and save edits
+    # Handle edits
     if st.button("💾 Save All Changes", use_container_width=True):
         for i, row in edited_df.iterrows():
             original = df.loc[df["id"] == row["id"]].iloc[0]
-            changed_cols = {col: row[col] for col in df.columns if col in row and row[col] != original[col]}
-            if changed_cols:
-                update_event(row["id"], changed_cols)
+            changes = {col: row[col] for col in df.columns if col in row and row[col] != original[col]}
+            if changes:
+                update_event(row["id"], changes)
+        st.success("✅ All edits saved!")
+        st.rerun()
 
-    # Inline delete buttons
-    st.divider()
-    st.subheader("🗑️ Delete Individual Rows")
-    for _, row in df.iterrows():
-        cols = st.columns([8, 1])
-        with cols[0]:
-            st.markdown(f"**{row['id']}** — {row['player']} | {row['event']} | {row['outcome']}")
-        with cols[1]:
-            if st.button("❌", key=f"del_{row['id']}"):
-                delete_event(row["id"])
-                st.rerun()
+    # Handle deletes
+    delete_ids = edited_df.loc[edited_df["Delete?"], "id"].tolist()
+    if delete_ids and st.button("🗑️ Delete Selected Rows", use_container_width=True):
+        for row_id in delete_ids:
+            delete_event(row_id)
+        st.rerun()
 
-    # CSV download
-    st.divider()
-    st.download_button(
-        "⬇️ Download CSV",
-        df.to_csv(index=False).encode("utf-8"),
-        "volleyball_events.csv",
-        "text/csv"
-    )
+    # CSV Export
+    st.download_button("⬇️ Download CSV", df.to_csv(index=False).encode("utf-8"), "volleyball_events.csv", "text/csv")
 
 else:
     st.info("No events logged yet.")
