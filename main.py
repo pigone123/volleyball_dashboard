@@ -57,34 +57,38 @@ def horizontal_buttons(label, options, session_key):
     st.markdown(f"#### {label}")
 
     cols = st.columns(len(options))
-    selected = st.session_state.get(session_key, options[0])
+    # Use session state to track selected value
+    if session_key not in st.session_state:
+        st.session_state[session_key] = options[0]
 
     for i, opt in enumerate(options):
         button_label = opt if opt else "—"
-        # Add a checkmark for selected button
-        if opt == selected:
+        # Add a checkmark for the selected button
+        if opt == st.session_state[session_key]:
             button_label = f"✅ {button_label}"
+
         if cols[i].button(button_label, key=f"{session_key}_{i}"):
             st.session_state[session_key] = opt
-            st.experimental_rerun()  # immediately rerun app to reflect the selection
+            st.experimental_rerun()  # trigger rerun to update the UI
 
     st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
-    return st.session_state.get(session_key, options[0])
+
 
 
 
 # ---------------- PLAYER SELECTION ----------------
-player = horizontal_buttons("### 🏐 Select Player", 
+horizontal_buttons("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
     "selected_player"
 )
+player = st.session_state["selected_player"]
 
 # ---------------- EVENT SELECTION ----------------
-event = horizontal_buttons("### ⚡ Select Event", 
+horizontal_buttons("### ⚡ Select Event", 
     ["", "Serve", "Attack", "Block", "Receive", "Dig", "Set", "Defense"], 
     "selected_event"
 )
-
+event =  st.session_state["selected_event"]
 # ---------------- SUBCHOICES ----------------
 attack_type = None
 set_to = None
