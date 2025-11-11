@@ -52,26 +52,41 @@ st.session_state.set_number = st.selectbox(
 )
 
 # ---------------- HELPER ----------------
-def horizontal_buttons(label, options, session_key):
-    """Horizontal buttons that behave like radio buttons with instant highlight."""
+def horizontal_buttons(label, options, session_key, highlight_color="#00b4d8"):
+    """
+    Creates a horizontal button group that behaves like radio buttons.
+    The selected button is highlighted with a background color.
+    """
     st.markdown(f"#### {label}")
 
-    cols = st.columns(len(options))
-    # Use session state to track selected value
     if session_key not in st.session_state:
         st.session_state[session_key] = options[0]
 
+    cols = st.columns(len(options))
     for i, opt in enumerate(options):
         button_label = opt if opt else "—"
-        # Add a checkmark for the selected button
-        if opt == st.session_state[session_key]:
-            button_label = f"✅ {button_label}"
-
-        if cols[i].button(button_label, key=f"{session_key}_{i}"):
-            st.session_state[session_key] = opt
-            st.experimental_rerun()  # trigger rerun to update the UI
+        # Highlight selected button using HTML + markdown
+        if st.session_state[session_key] == opt:
+            # Colored background for selected
+            button_html = f"""
+            <div style="
+                background-color:{highlight_color};
+                color:white;
+                text-align:center;
+                padding:0.4rem 0.6rem;
+                border-radius:8px;
+                font-weight:bold;
+                cursor:pointer;
+            ">{button_label}</div>
+            """
+            if cols[i].button(button_label, key=f"{session_key}_{i}"):
+                st.session_state[session_key] = opt
+        else:
+            if cols[i].button(button_label, key=f"{session_key}_{i}"):
+                st.session_state[session_key] = opt
 
     st.markdown(f"**Selected:** {st.session_state.get(session_key, 'None')}")
+
 
 
 
