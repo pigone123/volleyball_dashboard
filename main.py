@@ -52,26 +52,59 @@ st.session_state.set_number = st.selectbox(
 )
 
 # ---------------- HELPER ----------------
-def horizontal_radio(label, options, session_key):
-    """Creates a radio button that persists in session_state."""
-    current_value = st.session_state.get(session_key, options[0])
-    value = st.radio(
-        label,
-        options,
-        index=options.index(current_value) if current_value in options else 0,
-        horizontal=True,
-        key=session_key  # Syncs automatically to session_state
-    )
-    return value
+def horizontal_buttons(label, options, session_key):
+    """Creates a horizontal button group that behaves like radio buttons."""
+    st.markdown(f"#### {label}")
+    cols = st.columns(len(options))
+    selected = st.session_state.get(session_key, options[0])
+
+    # Add custom CSS for highlighting
+    st.markdown("""
+        <style>
+        div[data-testid="column"] button[kind="secondary"] {
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            margin: 0.2rem;
+            border: 1px solid #ccc;
+            transition: all 0.2s ease-in-out;
+        }
+        div[data-testid="column"] button[kind="secondary"]:hover {
+            background-color: #f0f2f6;
+            border-color: #aaa;
+        }
+        div[data-testid="column"] button[selected="true"] {
+            background-color: #00b4d8 !important;
+            color: white !important;
+            border-color: #0096c7 !important;
+            font-weight: bold;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    for i, opt in enumerate(options):
+        is_selected = (opt == selected)
+        button_label = opt if opt else "—"
+        button_placeholder = cols[i].empty()
+        if button_placeholder.button(button_label, key=f"{session_key}_{i}", use_container_width=True):
+            st.session_state[session_key] = opt
+            st.rerun()
+        # Inject custom attribute for highlighting (works by DOM attribute)
+        st.markdown(
+            f"<script>var btn = window.parent.document.querySelectorAll('button[kind=\"secondary\"]')[{i}]; if (btn && '{str(is_selected).lower()}'=='true') btn.setAttribute('selected', 'true');</script>",
+            unsafe_allow_html=True,
+        )
+
+    return st.session_state.get(session_key, options[0])
+
 
 # ---------------- PLAYER SELECTION ----------------
-player = horizontal_radio("### 🏐 Select Player", 
+player = horizontal_buttons("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
     "selected_player"
 )
 
 # ---------------- EVENT SELECTION ----------------
-event = horizontal_radio("### ⚡ Select Event", 
+event = horizontal_buttons("### ⚡ Select Event", 
     ["", "Serve", "Attack", "Block", "Receive", "Dig", "Set", "Defense"], 
     "selected_event"
 )
