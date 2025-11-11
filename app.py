@@ -174,11 +174,14 @@ def refresh_table(n_clicks, filter_text):
         style_cell={"textAlign": "left", "minWidth": "100px", "width": "150px"},
         page_action="none"
     )
-    return html.Div([
+   return html.Div([
         table,
         html.Div(
             dbc.Button("💾 Save Changes", id="save_table_changes", color="primary", className="my-3"),
-
+            style={"textAlign": "center"}  # centers the button
+        ),
+        html.Div(id="table_save_status")
+    ])
 
 # ---------------- Apply Filters ----------------
 @app.callback(
