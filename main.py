@@ -86,7 +86,7 @@ event_outcomes = {
     "Block": ["Blockout", "Touch", "Kill", "Softblock", "Error"],
     "Receive": ["Perfect", "Good", "Neutral", "Bad"],
     "Dig": ["Good", "Neutral", "Bad"],
-    "Set": ["0 Blockers", "1 Blocker", "2 Blocker"],
+    "Set": ["0 Blockers", "1 Blocker", "2 Blocker", "Overpass"],
     "Defense": ["Good", "Neutral", "Bad"]
 }
 
