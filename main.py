@@ -81,7 +81,7 @@ attack_type = None
 set_to = None
 
 event_outcomes = {
-    "Serve": ["Ace", "Out", "Net", "In", "Off System"],
+    "Serve": ["Ace", "Out", "Net", "In", "Off System", "Overpass"],
     "Attack": ["Blockout", "Out", "Net", "In Play", "Off System"],
     "Block": ["Blockout", "Touch", "Kill", "Softblock", "Error"],
     "Receive": ["Perfect", "Good", "Neutral", "Bad"],
