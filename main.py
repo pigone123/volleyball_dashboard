@@ -106,7 +106,11 @@ outcome = (
     horizontal_radio("### 🎯 Select Outcome", [""] + outcome_options, "selected_outcome")
     if outcome_options else None
 )
-
+free_text = st.text_area(
+    "📝 Additional Notes (optional)",
+    placeholder="Write anything you want to attach to this event...",
+    key="free_text"
+)
 # ---------------- SUPABASE OPS ----------------
 def save_event():
     extra_info = attack_type if attack_type else set_to
@@ -116,7 +120,8 @@ def save_event():
         "outcome": outcome,
         "video_url": st.session_state.video_url,
         "game_name": st.session_state.game_name,
-        "set_number": st.session_state.set_number if st.session_state.set_number else None
+        "set_number": st.session_state.set_number if st.session_state.set_number else None,
+        "notes": free_text
     }
 
     response = requests.post(f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}", headers=HEADERS, data=json.dumps(data))
