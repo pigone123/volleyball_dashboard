@@ -84,7 +84,7 @@ event_outcomes = {
     "Serve": ["Ace", "Out", "Net", "In", "Off System", "Overpass"],
     "Attack": ["Blockout", "Out", "Net", "In Play", "Off System"],
     "Block": ["Blockout", "Touch", "Kill", "Softblock", "Error"],
-    "Receive": ["Perfect", "Good", "Neutral", "Bad"],
+    "Receive": ["Perfect", "Good", "Neutral", "Bad","Aced"],
     "Dig": ["Good", "Neutral", "Bad"],
     "Set": ["0 Blockers", "1 Blocker", "2 Blocker", "Overset"],
     "Defense": ["Good", "Neutral", "Bad"]
