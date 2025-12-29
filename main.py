@@ -16,7 +16,6 @@ HEADERS = {
 
 # ---------------- STREAMLIT CONFIG ----------------
 st.set_page_config(page_title="🏐 Volleyball Event Dashboard", layout="wide")
-st.info("CODE VERSION: attack-fix-v2")
 
 # Initialize all session_state variables
 for key in [
