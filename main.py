@@ -82,7 +82,7 @@ set_to = None
 
 event_outcomes = {
     "Serve": ["Ace", "Out", "Net", "In", "Off System", "Overpass"],
-    "Attack": ["Blockout", "Out", "Net", "In Play", "Off System"],
+    "Attack": ["Blockout", "Out", "Net", "In Play", "Off System", "Sucess"],
     "Block": ["Blockout", "Touch", "Kill", "Softblock", "Error"],
     "Receive": ["Perfect", "Good", "Neutral", "Bad","Aced"],
     "Dig": ["Good", "Neutral", "Bad"],
@@ -97,7 +97,7 @@ elif event == "Set":
 
 # ---------------- OUTCOME ----------------
 base_outcomes = event_outcomes.get(event, [])
-if event == "Attack" and st.session_state.get("attack_type") in ["Spike", "Tip", "Hole"]:
+if event == "Attack" and st.session_state.get("attack_type") in ["Spike"]:
     outcome_options = base_outcomes + ["Hard Blocked", "Soft Blocked", "Kill"]
 else:
     outcome_options = base_outcomes
