@@ -97,7 +97,7 @@ elif event == "Set":
 
 # ---------------- OUTCOME ----------------
 base_outcomes = event_outcomes.get(event, [])
-if event == "Attack" and st.session_state.get("attack_type") == "Spike":
+if event == "Attack" and st.session_state.get("attack_type") in ["Spike", "Tip", "Hole"]:
     outcome_options = base_outcomes + ["Hard Blocked", "Soft Blocked", "Kill"]
 else:
     outcome_options = base_outcomes
