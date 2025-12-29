@@ -76,13 +76,22 @@ event = horizontal_radio("### ⚡ Select Event",
     "selected_event"
 )
 
+if "prev_event" not in st.session_state:
+    st.session_state.prev_event = event
+
+if event != st.session_state.prev_event:
+    st.session_state.selected_outcome = ""
+    st.session_state.attack_type = ""
+    st.session_state.set_to = ""
+    st.session_state.prev_event = event
+
 # ---------------- SUBCHOICES ----------------
 attack_type = None
 set_to = None
 
 event_outcomes = {
     "Serve": ["Ace", "Out", "Net", "In", "Off System", "Overpass"],
-    "Attack": ["Blockout", "Out", "Net", "In Play", "Off System", "Sucess"],
+    "Attack": ["Blockout", "Out", "Net", "In Play", "Off System", "Success"],
     "Block": ["Blockout", "Touch", "Kill", "Softblock", "Error"],
     "Receive": ["Perfect", "Good", "Neutral", "Bad","Aced"],
     "Dig": ["Good", "Neutral", "Bad"],
