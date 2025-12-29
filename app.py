@@ -34,7 +34,7 @@ EVENT_OUTCOMES = {
     "Receive": ["Good", "Neutral", "Bad"],
     "Dig": ["Good", "Neutral", "Bad"],
     "Set": ["0 Blockers", "1 Blocker", "2 Blocker"],
-    "Defense": ["Good", "Neutral", "Bad"]
+    "Defense": ["Good", "Neutral", "Bad","Overpass", "Error"]
 }
 
 # ---------------- HELPERS ----------------
