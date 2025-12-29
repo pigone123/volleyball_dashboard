@@ -76,15 +76,6 @@ event = horizontal_radio("### ⚡ Select Event",
     "selected_event"
 )
 
-if "prev_event" not in st.session_state:
-    st.session_state.prev_event = event
-
-if event != st.session_state.prev_event:
-    st.session_state.selected_outcome = ""
-    st.session_state.attack_type = ""
-    st.session_state.set_to = ""
-    st.session_state.prev_event = event
-
 # ---------------- SUBCHOICES ----------------
 attack_type = None
 set_to = None
