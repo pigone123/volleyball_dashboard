@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
+from pandas import ExcelWriter
+from collections import OrderedDict
+
 
 # ---------------- SUPABASE CONFIG ----------------
 SUPABASE_URL = st.secrets["SUPABASE"]["URL"]
@@ -63,6 +66,86 @@ def horizontal_radio(label, options, session_key):
         key=session_key  # Syncs automatically to session_state
     )
     return value
+
+def extract_category(event_value):
+    if "(" in event_value:
+        return event_value.split("(")[0].strip()
+    return event_value
+
+def export_player_excel(df, player_name):
+    player_df = df[df["player"] == player_name].copy()
+
+    if player_df.empty:
+        st.error("No data for this player.")
+        return
+
+    player_df["category"] = player_df["event"].apply(extract_category)
+
+    output_path = f"/tmp/{player_name}_volleyball_report.xlsx"
+
+    with ExcelWriter(output_path, engine="openpyxl") as writer:
+
+        summary_rows = []
+
+        for category in sorted(player_df["category"].unique()):
+            cat_df = player_df[player_df["category"] == category]
+
+            # -------- Outcome statistics --------
+            outcome_stats = (
+                cat_df.groupby("outcome")
+                .size()
+                .reset_index(name="count")
+                .sort_values("count", ascending=False)
+            )
+
+            total = outcome_stats["count"].sum()
+            outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total]
+
+            outcome_stats.to_excel(
+                writer,
+                sheet_name=category[:31],
+                index=False,
+                startrow=0
+            )
+
+            # -------- Per-game progress --------
+            if "game_name" in cat_df.columns:
+                game_stats = (
+                    cat_df.groupby(["game_name", "outcome"])
+                    .size()
+                    .reset_index(name="count")
+                )
+
+                pivot_game = game_stats.pivot(
+                    index="game_name",
+                    columns="outcome",
+                    values="count"
+                ).fillna(0)
+
+                pivot_game.to_excel(
+                    writer,
+                    sheet_name=category[:31],
+                    startrow=len(outcome_stats) + 3
+                )
+
+            summary_rows.append({
+                "Category": category,
+                "Total Events": total
+            })
+
+        # -------- Summary Sheet --------
+        summary_df = pd.DataFrame(summary_rows)
+        summary_df.to_excel(writer, sheet_name="Summary", index=False)
+
+    st.success("✅ Excel report created!")
+    with open(output_path, "rb") as f:
+        st.download_button(
+            "⬇️ Download Excel",
+            f,
+            file_name=f"{player_name}_volleyball_report.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
 
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
@@ -223,6 +306,17 @@ if not df.empty:
         "volleyball_events.csv",
         "text/csv"
     )
+
+    st.divider()
+    st.subheader("📊 Player Statistics Export")
+    
+    player_for_export = st.selectbox(
+        "Select player to export",
+        sorted(df["player"].dropna().unique())
+    )
+    
+    if st.button("⬇️ Download Player Excel Report"):
+        export_player_excel(df, player_for_export)
 
 else:
     st.info("No events logged yet.")
