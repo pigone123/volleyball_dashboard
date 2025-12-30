@@ -5,6 +5,8 @@ import json
 from pandas import ExcelWriter
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image
 from io import BytesIO
@@ -75,6 +77,17 @@ def extract_category(event_value):
         return event_value.split("(")[0].strip()
     return event_value
 
+def auto_adjust_columns(writer, sheet_name):
+    """Adjust column widths automatically."""
+    ws = writer.sheets[sheet_name]
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = max_length + 2
+
 
 def export_player_excel(df, player_name):
     player_df = df[df["player"] == player_name].copy()
@@ -85,9 +98,15 @@ def export_player_excel(df, player_name):
 
     player_df["category"] = player_df["event"].apply(extract_category)
 
+    # Map game names to sequential labels for plotting
+    games_ordered = player_df["game_name"].dropna().unique()
+    game_mapping = {game: f"Game {i+1}" for i, game in enumerate(games_ordered)}
+    player_df["game_label"] = player_df["game_name"].map(game_mapping)
+
     output_path = f"/tmp/{player_name}_volleyball_report.xlsx"
 
-    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+    with ExcelWriter(output_path, engine="openpyxl") as writer:
+
         summary_rows = []
 
         for category in sorted(player_df["category"].unique()):
@@ -100,86 +119,60 @@ def export_player_excel(df, player_name):
                 .reset_index(name="count")
                 .sort_values("count", ascending=False)
             )
+
             total = outcome_stats["count"].sum()
             outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
             outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
 
-            outcome_stats.to_excel(
-                writer,
-                sheet_name=category[:31],
-                index=False,
-                startrow=0
-            )
+            # Write outcome stats
+            outcome_stats.to_excel(writer, sheet_name=category[:31], index=False, startrow=0)
 
             # -------- Per-game progress --------
-            if "game_name" in cat_df.columns:
-                game_stats = (
-                    cat_df.groupby(["game_name", "outcome"])
-                    .size()
-                    .reset_index(name="count")
-                )
-                pivot_game = game_stats.pivot(
-                    index="game_name",
-                    columns="outcome",
-                    values="count"
-                ).fillna(0)
+            pivot_game = (
+                cat_df.groupby(["game_label", "outcome"])
+                .size()
+                .reset_index(name="count")
+                .pivot(index="game_label", columns="outcome", values="count")
+                .fillna(0)
+            )
 
-                pivot_game.to_excel(
-                    writer,
-                    sheet_name=category[:31],
-                    startrow=len(outcome_stats) + 3
-                )
+            startrow = len(outcome_stats) + 3
+            pivot_game.to_excel(writer, sheet_name=category[:31], startrow=startrow)
 
+            # -------- Add progress graph --------
+            fig, ax = plt.subplots(figsize=(8, 4))
+            pivot_game.plot(kind="bar", stacked=True, ax=ax)
+            ax.set_title(f"{category} - Progress over Games")
+            ax.set_ylabel("Count")
+            ax.set_xlabel("Game")
+            plt.xticks(rotation=0)
+            plt.tight_layout()
+
+            # Save figure to BytesIO
+            img_data = BytesIO()
+            plt.savefig(img_data, format="png")
+            plt.close(fig)
+            img_data.seek(0)
+            img = XLImage(img_data)
+            img.anchor = f"A{startrow + len(pivot_game) + 5}"
+            ws = writer.sheets[category[:31]]
+            ws.add_image(img)
+
+            # -------- Add to summary --------
             summary_rows.append({
                 "Category": category,
                 "Total Events": total
             })
 
-    # -------- Add charts to Excel --------
-    wb = load_workbook(output_path)
+            # Auto-adjust columns
+            auto_adjust_columns(writer, category[:31])
 
-    for category in sorted(player_df["category"].unique()):
-        if "game_name" not in player_df.columns:
-            continue
-        cat_df = player_df[player_df["category"] == category]
-        game_stats = (
-            cat_df.groupby(["game_name", "outcome"])
-            .size()
-            .reset_index(name="count")
-        )
-        pivot_game = game_stats.pivot(
-            index="game_name",
-            columns="outcome",
-            values="count"
-        ).fillna(0)
+        # -------- Summary Sheet --------
+        summary_df = pd.DataFrame(summary_rows)
+        summary_df.to_excel(writer, sheet_name="Summary", index=False)
+        auto_adjust_columns(writer, "Summary")
 
-        if pivot_game.empty:
-            continue
-
-        # Plot chart
-        fig, ax = plt.subplots(figsize=(8, 4))
-        pivot_game.plot(kind="line", marker="o", ax=ax)
-        ax.set_title(f"{player_name} - {category} Progress")
-        ax.set_xlabel("Game")
-        ax.set_ylabel("Count")
-        ax.grid(True)
-        ax.legend(title="Outcome", bbox_to_anchor=(1.05, 1), loc='upper left')
-
-        # Save chart to BytesIO
-        img_bytes = BytesIO()
-        plt.savefig(img_bytes, format='png', bbox_inches='tight')
-        plt.close(fig)
-        img_bytes.seek(0)
-
-        # Insert chart into Excel sheet
-        ws = wb[category[:31]]
-        img = Image(img_bytes)
-        img.anchor = f"A{len(pivot_game) + 10}"  # place below the pivot table
-        ws.add_image(img)
-
-    wb.save(output_path)
-
-    st.success("✅ Excel report with charts created!")
+    st.success("✅ Excel report created!")
     with open(output_path, "rb") as f:
         st.download_button(
             "⬇️ Download Excel",
