@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 from io import BytesIO
 
 # ---------------- SUPABASE CONFIG ----------------
@@ -102,8 +103,6 @@ def export_player_excel(df, player_name):
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
 
         summary_rows = []
-
-        # Prepare overall summary data
         overall_summary = []
 
         for category in sorted(player_df["category"].unique()):
@@ -206,9 +205,47 @@ def export_player_excel(df, player_name):
                         "Percentage": row["percentage"]
                     })
 
-        # -------- Summary Sheet --------
-        summary_df = pd.DataFrame(overall_summary)
-        summary_df.to_excel(writer, sheet_name="Summary", index=False)
+        # -------- Summary Sheet with separate tables per category --------
+
+        wb = writer.book
+        ws_summary = wb.create_sheet("Summary")
+        start_row = 1
+
+        for category in sorted(player_df["category"].unique()):
+            cat_df = player_df[player_df["category"] == category]
+
+            # Outcome statistics for this category
+            outcome_stats = (
+                cat_df.groupby("outcome")
+                .size()
+                .reset_index(name="count")
+                .sort_values("count", ascending=False)
+            )
+            total = outcome_stats["count"].sum()
+            outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
+            outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
+
+            # Write category title
+            ws_summary.cell(row=start_row, column=1, value=f"Category: {category}")
+            start_row += 1
+
+            # Write outcome_stats table
+            for r in dataframe_to_rows(outcome_stats, index=False, header=True):
+                for c_idx, val in enumerate(r, 1):
+                    ws_summary.cell(row=start_row, column=c_idx, value=val)
+                start_row += 1
+
+            # Add empty row between categories
+            start_row += 2
+
+        # Auto-fit columns
+        for col in ws_summary.columns:
+            max_length = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            ws_summary.column_dimensions[col_letter].width = max_length + 2
 
     st.success("✅ Excel report created!")
     with open(output_path, "rb") as f:
