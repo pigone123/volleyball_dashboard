@@ -90,7 +90,7 @@ def export_player_excel(df, player_name):
         for category in sorted(player_df["category"].unique()):
             cat_df = player_df[player_df["category"] == category]
 
-            # -------- Outcome statistics --------
+            # -------- Outcome statistics with percentages --------
             outcome_stats = (
                 cat_df.groupby("outcome")
                 .size()
@@ -99,7 +99,8 @@ def export_player_excel(df, player_name):
             )
 
             total = outcome_stats["count"].sum()
-            outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total]
+            outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
+            outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
 
             outcome_stats.to_excel(
                 writer,
@@ -145,6 +146,7 @@ def export_player_excel(df, player_name):
             file_name=f"{player_name}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
 
 
 # ---------------- PLAYER SELECTION ----------------
@@ -205,10 +207,11 @@ def save_event():
     extra_info = attack_type if attack_type else set_to
     data = {
         "player": player,
-        "event": f"{event} ({extra_info})" if extra_info else event,
+        "event_category": event,
+        "attack_type": attack_type if event == "Attack" else None,
         "outcome": outcome,
         "video_url": st.session_state.video_url,
-        "game_name": st.session_state.game_name,
+        "game_name": st.session_state.game_name if st.session_state.game_name else "No Game Entered",
         "set_number": st.session_state.set_number if st.session_state.set_number else None,
         "notes": free_text
     }
