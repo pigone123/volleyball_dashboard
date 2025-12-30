@@ -6,6 +6,7 @@ from utils.constants import EVENT_OUTCOMES, PLAYERS
 from services.supabase_service import (
     save_event, load_events, update_event, delete_event
 )
+from services.export_service import export_all_events_excel
 from services.export_service import export_player_excel
 
 setup_page()
@@ -45,9 +46,21 @@ if st.button("💾 Save Event"):
     else:
         st.error("Missing fields")
 
+st.divider()
+st.subheader("📤 Export Data")
 
 df = load_events()
 if not df.empty:
-    st.dataframe(df)
-    if st.button("⬇️ Export Player Excel"):
-        export_player_excel(df, player)
+    export_all_events_excel(df)
+
+
+    st.divider()
+    st.subheader("📊 Player Statistics Export")
+
+    player_for_export = st.selectbox(
+        "Select player",
+        sorted(df["player"].dropna().unique())
+    )
+
+    if st.button("⬇️ Download Player Excel Report", use_container_width=True):
+        export_player_excel(df, player_for_export)
