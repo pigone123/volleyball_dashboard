@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook
-from openpyxl.drawing.image import Image
 from io import BytesIO
 
 # ---------------- SUPABASE CONFIG ----------------
@@ -139,16 +138,17 @@ def export_player_excel(df, player_name):
             startrow = len(outcome_stats) + 3
             pivot_game.to_excel(writer, sheet_name=category[:31], startrow=startrow)
 
-            # -------- Add progress graph --------
+            # -------- Add progress line graph --------
             fig, ax = plt.subplots(figsize=(8, 4))
-            pivot_game.plot(kind="bar", stacked=True, ax=ax)
+            for outcome_col in pivot_game.columns:
+                ax.plot(pivot_game.index, pivot_game[outcome_col], marker='o', label=outcome_col)
             ax.set_title(f"{category} - Progress over Games")
             ax.set_ylabel("Count")
             ax.set_xlabel("Game")
+            ax.legend()
             plt.xticks(rotation=0)
             plt.tight_layout()
 
-            # Save figure to BytesIO
             img_data = BytesIO()
             plt.savefig(img_data, format="png")
             plt.close(fig)
@@ -180,8 +180,6 @@ def export_player_excel(df, player_name):
             file_name=f"{player_name}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
-
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
