@@ -182,3 +182,21 @@ def export_all_events_excel(df):
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
+
+def _write_summary_sheet(writer, rows):
+    df = pd.DataFrame(rows)
+    start = 0
+
+    for category in df["Category"].unique():
+        sub = df[df["Category"] == category].copy()
+        total = sub["Count"].sum()
+        sub.loc[len(sub)] = ["TOTAL", "", total, 100.0]
+
+        sub.to_excel(
+            writer,
+            sheet_name="Summary",
+            index=False,
+            startrow=start
+        )
+        start += len(sub) + 3
+
