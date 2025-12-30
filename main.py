@@ -4,7 +4,10 @@ import requests
 import json
 from pandas import ExcelWriter
 from collections import OrderedDict
-
+import matplotlib.pyplot as plt
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image
+from io import BytesIO
 
 # ---------------- SUPABASE CONFIG ----------------
 SUPABASE_URL = st.secrets["SUPABASE"]["URL"]
@@ -72,6 +75,7 @@ def extract_category(event_value):
         return event_value.split("(")[0].strip()
     return event_value
 
+
 def export_player_excel(df, player_name):
     player_df = df[df["player"] == player_name].copy()
 
@@ -83,21 +87,19 @@ def export_player_excel(df, player_name):
 
     output_path = f"/tmp/{player_name}_volleyball_report.xlsx"
 
-    with ExcelWriter(output_path, engine="openpyxl") as writer:
-
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         summary_rows = []
 
         for category in sorted(player_df["category"].unique()):
             cat_df = player_df[player_df["category"] == category]
 
-            # -------- Outcome statistics with percentages --------
+            # -------- Outcome statistics --------
             outcome_stats = (
                 cat_df.groupby("outcome")
                 .size()
                 .reset_index(name="count")
                 .sort_values("count", ascending=False)
             )
-
             total = outcome_stats["count"].sum()
             outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
             outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
@@ -116,7 +118,6 @@ def export_player_excel(df, player_name):
                     .size()
                     .reset_index(name="count")
                 )
-
                 pivot_game = game_stats.pivot(
                     index="game_name",
                     columns="outcome",
@@ -134,11 +135,51 @@ def export_player_excel(df, player_name):
                 "Total Events": total
             })
 
-        # -------- Summary Sheet --------
-        summary_df = pd.DataFrame(summary_rows)
-        summary_df.to_excel(writer, sheet_name="Summary", index=False)
+    # -------- Add charts to Excel --------
+    wb = load_workbook(output_path)
 
-    st.success("✅ Excel report created!")
+    for category in sorted(player_df["category"].unique()):
+        if "game_name" not in player_df.columns:
+            continue
+        cat_df = player_df[player_df["category"] == category]
+        game_stats = (
+            cat_df.groupby(["game_name", "outcome"])
+            .size()
+            .reset_index(name="count")
+        )
+        pivot_game = game_stats.pivot(
+            index="game_name",
+            columns="outcome",
+            values="count"
+        ).fillna(0)
+
+        if pivot_game.empty:
+            continue
+
+        # Plot chart
+        fig, ax = plt.subplots(figsize=(8, 4))
+        pivot_game.plot(kind="line", marker="o", ax=ax)
+        ax.set_title(f"{player_name} - {category} Progress")
+        ax.set_xlabel("Game")
+        ax.set_ylabel("Count")
+        ax.grid(True)
+        ax.legend(title="Outcome", bbox_to_anchor=(1.05, 1), loc='upper left')
+
+        # Save chart to BytesIO
+        img_bytes = BytesIO()
+        plt.savefig(img_bytes, format='png', bbox_inches='tight')
+        plt.close(fig)
+        img_bytes.seek(0)
+
+        # Insert chart into Excel sheet
+        ws = wb[category[:31]]
+        img = Image(img_bytes)
+        img.anchor = f"A{len(pivot_game) + 10}"  # place below the pivot table
+        ws.add_image(img)
+
+    wb.save(output_path)
+
+    st.success("✅ Excel report with charts created!")
     with open(output_path, "rb") as f:
         st.download_button(
             "⬇️ Download Excel",
@@ -146,7 +187,6 @@ def export_player_excel(df, player_name):
             file_name=f"{player_name}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
 
 
 # ---------------- PLAYER SELECTION ----------------
