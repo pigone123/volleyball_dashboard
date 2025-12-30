@@ -97,10 +97,11 @@ def export_player_excel(df, player_name):
 
     player_df["category"] = player_df["event"].apply(extract_category)
 
-    # Map game names to sequential labels for plotting
+    # Create chronological game order for graph (without changing table names)
     games_ordered = player_df["game_name"].dropna().unique()
+    # Keep the order as it appears in the dataframe (assumes df is sorted chronologically)
     game_mapping = {game: f"Game {i+1}" for i, game in enumerate(games_ordered)}
-    player_df["game_label"] = player_df["game_name"].map(game_mapping)
+    player_df["game_number"] = player_df["game_name"].map(game_mapping)
 
     output_path = f"/tmp/{player_name}_volleyball_report.xlsx"
 
@@ -118,7 +119,6 @@ def export_player_excel(df, player_name):
                 .reset_index(name="count")
                 .sort_values("count", ascending=False)
             )
-
             total = outcome_stats["count"].sum()
             outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
             outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
@@ -128,37 +128,47 @@ def export_player_excel(df, player_name):
 
             # -------- Per-game progress --------
             pivot_game = (
-                cat_df.groupby(["game_label", "outcome"])
+                cat_df.groupby(["game_name", "outcome"])
                 .size()
                 .reset_index(name="count")
-                .pivot(index="game_label", columns="outcome", values="count")
-                .fillna(0)
             )
+            pivot_game_total = pivot_game.groupby("game_name")["count"].sum().reset_index()
+            pivot_game = pivot_game.merge(pivot_game_total, on="game_name", suffixes=("", "_total"))
+            pivot_game["percentage"] = (pivot_game["count"] / pivot_game["count_total"] * 100).round(1)
+
+            pivot_table = pivot_game.pivot(index="game_name", columns="outcome", values="percentage").fillna(0)
 
             startrow = len(outcome_stats) + 3
-            pivot_game.to_excel(writer, sheet_name=category[:31], startrow=startrow)
+            pivot_table.to_excel(writer, sheet_name=category[:31], startrow=startrow)
 
-            # -------- Add progress line graph --------
+            # -------- Add progress line graph (percentages) --------
             fig, ax = plt.subplots(figsize=(10, 5))
-            colors = plt.cm.tab10.colors  # Distinct colors for up to 10 outcomes
-            for i, outcome_col in enumerate(pivot_game.columns):
+            colors = plt.cm.tab10.colors
+
+            # Map x-axis to sequential game numbers for chronological order
+            x_labels = list(pivot_table.index)
+            x = range(len(x_labels))
+
+            for i, outcome_col in enumerate(pivot_table.columns):
+                y = pivot_table[outcome_col].values
                 ax.plot(
-                    pivot_game.index,
-                    pivot_game[outcome_col],
+                    x, y,
                     marker='o',
                     label=outcome_col,
                     color=colors[i % len(colors)]
                 )
                 # Add data labels
-                for x, y in zip(pivot_game.index, pivot_game[outcome_col]):
-                    ax.text(x, y + 0.1, str(int(y)), ha='center', va='bottom', fontsize=8)
+                for xi, yi in zip(x, y):
+                    ax.text(xi, yi + 0.5, f"{yi}%", ha='center', va='bottom', fontsize=8)
 
-            ax.set_title(f"{category} - Progress over Games", fontsize=14)
-            ax.set_ylabel("Count", fontsize=12)
+            ax.set_title(f"{category} - Performance over Games (%)", fontsize=14)
+            ax.set_ylabel("Percentage (%)", fontsize=12)
             ax.set_xlabel("Game", fontsize=12)
+            ax.set_xticks(x)
+            ax.set_xticklabels([f"Game {i+1}" for i in range(len(x_labels))], rotation=0)
+            ax.set_ylim(0, 100)
             ax.grid(True, linestyle='--', alpha=0.5)
             ax.legend(title="Outcome", fontsize=9)
-            plt.xticks(rotation=0)
             plt.tight_layout()
 
             # Save figure to Excel
@@ -167,17 +177,15 @@ def export_player_excel(df, player_name):
             plt.close(fig)
             img_data.seek(0)
             img = XLImage(img_data)
-            img.anchor = f"A{startrow + len(pivot_game) + 5}"
+            img.anchor = f"A{startrow + len(pivot_table) + 5}"
             ws = writer.sheets[category[:31]]
             ws.add_image(img)
 
-            # -------- Add to summary --------
             summary_rows.append({
                 "Category": category,
                 "Total Events": total
             })
 
-            # Auto-adjust columns
             auto_adjust_columns(writer, category[:31])
 
         # -------- Summary Sheet --------
@@ -185,7 +193,7 @@ def export_player_excel(df, player_name):
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
         auto_adjust_columns(writer, "Summary")
 
-    st.success("✅ Excel report with graphs created!")
+    st.success("✅ Excel report with performance percentages created!")
     with open(output_path, "rb") as f:
         st.download_button(
             "⬇️ Download Excel",
