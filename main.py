@@ -91,7 +91,6 @@ def auto_adjust_columns(writer, sheet_name):
 
 def export_player_excel(df, player_name):
     player_df = df[df["player"] == player_name].copy()
-
     if player_df.empty:
         st.error("No data for this player.")
         return
@@ -100,9 +99,14 @@ def export_player_excel(df, player_name):
 
     output_path = f"/tmp/{player_name}_volleyball_report.xlsx"
 
-    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+    # Custom order for specific categories
+    OUTCOME_ORDER = {
+        "Defense": ["Perfect", "Good", "Neutral", "Bad", "Overpass", "Failure"],
+        "Dig": ["Perfect", "Good", "Neutral", "Bad"],
+        "Receive": ["Perfect", "Good", "Neutral", "Bad", "Aced"]
+    }
 
-        summary_rows = []
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         overall_summary = []
 
         for category in sorted(player_df["category"].unique()):
@@ -111,14 +115,20 @@ def export_player_excel(df, player_name):
 
             # -------- Outcome statistics --------
             outcome_stats = (
-                cat_df.groupby("outcome")
-                .size()
-                .reset_index(name="count")
-                .sort_values("count", ascending=False)
+                cat_df.groupby("outcome").size().reset_index(name="count")
             )
             total = outcome_stats["count"].sum()
             outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
             outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
+
+            # Apply custom order if applicable
+            if category in OUTCOME_ORDER:
+                outcome_stats["order"] = outcome_stats["outcome"].apply(
+                    lambda x: OUTCOME_ORDER[category].index(x) if x in OUTCOME_ORDER[category] else 999
+                )
+                outcome_stats = outcome_stats.sort_values("order").drop(columns="order")
+            else:
+                outcome_stats = outcome_stats.sort_values("count", ascending=False)
 
             outcome_stats.to_excel(writer, sheet_name=sheet_name, index=False, startrow=0)
 
@@ -134,13 +144,11 @@ def export_player_excel(df, player_name):
 
             # -------- Per-category graph --------
             ws = writer.book[sheet_name]
-
-            # Determine start row for chart
             outcome_rows = len(outcome_stats) + 1
             per_game_rows = len(cat_df["game_name"].unique()) + 3 if "game_name" in cat_df.columns else 0
             startrow_chart = outcome_rows + per_game_rows + 5
 
-            # Prepare per-game percentage pivot
+            # Graph in percentages
             pivot_percent = (
                 cat_df.groupby(["game_name", "outcome"])
                 .size()
@@ -153,14 +161,12 @@ def export_player_excel(df, player_name):
 
             x_labels = list(pivot_percent.index)
             x = range(len(x_labels))
-
             colors = plt.cm.tab10.colors
+
             fig, ax = plt.subplots(figsize=(10, 4))
             for i, outcome_col in enumerate(pivot_percent.columns):
                 y = pivot_percent[outcome_col].values
-                ax.plot(
-                    x, y, marker='o', label=outcome_col, color=colors[i % len(colors)]
-                )
+                ax.plot(x, y, marker='o', label=outcome_col, color=colors[i % len(colors)])
                 for xi, yi in zip(x, y):
                     ax.text(xi, yi + 0.5, f"{yi}%", ha='center', va='bottom', fontsize=8)
 
@@ -181,7 +187,7 @@ def export_player_excel(df, player_name):
             img.anchor = f"A{startrow_chart}"
             ws.add_image(img)
 
-            # Auto-fit columns
+            # Auto-adjust columns
             for col in ws.columns:
                 max_length = 0
                 col_letter = get_column_letter(col[0].column)
@@ -190,12 +196,7 @@ def export_player_excel(df, player_name):
                         max_length = max(max_length, len(str(cell.value)))
                 ws.column_dimensions[col_letter].width = max_length + 2
 
-            summary_rows.append({
-                "Category": category,
-                "Total Events": total
-            })
-
-            # Collect overall summary
+            # Collect overall summary for this category
             for _, row in outcome_stats.iterrows():
                 if row["outcome"] != "TOTAL":
                     overall_summary.append({
@@ -205,47 +206,19 @@ def export_player_excel(df, player_name):
                         "Percentage": row["percentage"]
                     })
 
-        # -------- Summary Sheet with separate tables per category --------
-
+        # -------- Summary Sheet --------
+        # Create separate table per category in summary
+        summary_ws_row = 0
         wb = writer.book
-        ws_summary = wb.create_sheet("Summary")
-        start_row = 1
+        summary_sheet = wb.create_sheet("Summary")
 
         for category in sorted(player_df["category"].unique()):
-            cat_df = player_df[player_df["category"] == category]
-
-            # Outcome statistics for this category
-            outcome_stats = (
-                cat_df.groupby("outcome")
-                .size()
-                .reset_index(name="count")
-                .sort_values("count", ascending=False)
-            )
-            total = outcome_stats["count"].sum()
-            outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
-            outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
-
-            # Write category title
-            ws_summary.cell(row=start_row, column=1, value=f"Category: {category}")
-            start_row += 1
-
-            # Write outcome_stats table
-            for r in dataframe_to_rows(outcome_stats, index=False, header=True):
-                for c_idx, val in enumerate(r, 1):
-                    ws_summary.cell(row=start_row, column=c_idx, value=val)
-                start_row += 1
-
-            # Add empty row between categories
-            start_row += 2
-
-        # Auto-fit columns
-        for col in ws_summary.columns:
-            max_length = 0
-            col_letter = get_column_letter(col[0].column)
-            for cell in col:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            ws_summary.column_dimensions[col_letter].width = max_length + 2
+            cat_summary = [s for s in overall_summary if s["Category"] == category]
+            if not cat_summary:
+                continue
+            summary_df = pd.DataFrame(cat_summary)
+            summary_df.to_excel(writer, sheet_name="Summary", index=False, startrow=summary_ws_row)
+            summary_ws_row += len(summary_df) + 3  # space between tables
 
     st.success("✅ Excel report created!")
     with open(output_path, "rb") as f:
