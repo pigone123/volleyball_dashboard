@@ -103,6 +103,9 @@ def export_player_excel(df, player_name):
 
         summary_rows = []
 
+        # Prepare overall summary data
+        overall_summary = []
+
         for category in sorted(player_df["category"].unique()):
             cat_df = player_df[player_df["category"] == category]
             sheet_name = category[:31]
@@ -114,9 +117,9 @@ def export_player_excel(df, player_name):
                 .reset_index(name="count")
                 .sort_values("count", ascending=False)
             )
-
             total = outcome_stats["count"].sum()
-            outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total]
+            outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
+            outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
 
             outcome_stats.to_excel(writer, sheet_name=sheet_name, index=False, startrow=0)
 
@@ -134,7 +137,7 @@ def export_player_excel(df, player_name):
             ws = writer.book[sheet_name]
 
             # Determine start row for chart
-            outcome_rows = len(outcome_stats) + 1  # +1 for TOTAL
+            outcome_rows = len(outcome_stats) + 1
             per_game_rows = len(cat_df["game_name"].unique()) + 3 if "game_name" in cat_df.columns else 0
             startrow_chart = outcome_rows + per_game_rows + 5
 
@@ -171,7 +174,6 @@ def export_player_excel(df, player_name):
             ax.set_xticklabels([f"Game {i+1}" for i in range(len(x_labels))], rotation=0)
             plt.tight_layout()
 
-            # Insert figure into Excel
             img_data = BytesIO()
             plt.savefig(img_data, format="png", dpi=150)
             plt.close(fig)
@@ -194,8 +196,18 @@ def export_player_excel(df, player_name):
                 "Total Events": total
             })
 
+            # Collect overall summary
+            for _, row in outcome_stats.iterrows():
+                if row["outcome"] != "TOTAL":
+                    overall_summary.append({
+                        "Category": category,
+                        "Outcome": row["outcome"],
+                        "Count": row["count"],
+                        "Percentage": row["percentage"]
+                    })
+
         # -------- Summary Sheet --------
-        summary_df = pd.DataFrame(summary_rows)
+        summary_df = pd.DataFrame(overall_summary)
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
     st.success("✅ Excel report created!")
@@ -206,6 +218,7 @@ def export_player_excel(df, player_name):
             file_name=f"{player_name}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
