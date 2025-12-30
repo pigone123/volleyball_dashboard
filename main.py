@@ -96,10 +96,9 @@ def export_player_excel(df, player_name):
         return
 
     player_df["category"] = player_df["event"].apply(extract_category)
-
     output_path = f"/tmp/{player_name}_volleyball_report.xlsx"
 
-    # Custom order for specific categories
+    # Outcome order per category (best → worst)
     OUTCOME_ORDER = {
         "Defense": ["Perfect", "Good", "Neutral", "Bad", "Overpass", "Failure"],
         "Dig": ["Perfect", "Good", "Neutral", "Bad"],
@@ -114,14 +113,12 @@ def export_player_excel(df, player_name):
             sheet_name = category[:31]
 
             # -------- Outcome statistics --------
-            outcome_stats = (
-                cat_df.groupby("outcome").size().reset_index(name="count")
-            )
+            outcome_stats = cat_df.groupby("outcome").size().reset_index(name="count")
             total = outcome_stats["count"].sum()
             outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
             outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
 
-            # Apply custom order if applicable
+            # Custom order
             if category in OUTCOME_ORDER:
                 outcome_stats["order"] = outcome_stats["outcome"].apply(
                     lambda x: OUTCOME_ORDER[category].index(x) if x in OUTCOME_ORDER[category] else 999
@@ -133,14 +130,19 @@ def export_player_excel(df, player_name):
             outcome_stats.to_excel(writer, sheet_name=sheet_name, index=False, startrow=0)
 
             # -------- Per-game table --------
+            startrow_game = len(outcome_stats) + 3
             if "game_name" in cat_df.columns:
-                game_stats = (
-                    cat_df.groupby(["game_name", "outcome"])
-                    .size()
-                    .reset_index(name="count")
-                )
+                game_stats = cat_df.groupby(["game_name", "outcome"]).size().reset_index(name="count")
                 pivot_game = game_stats.pivot(index="game_name", columns="outcome", values="count").fillna(0)
-                pivot_game.to_excel(writer, sheet_name=sheet_name, startrow=len(outcome_stats) + 3)
+
+                # Order columns in per-game table according to OUTCOME_ORDER
+                if category in OUTCOME_ORDER:
+                    ordered_cols = [c for c in OUTCOME_ORDER[category] if c in pivot_game.columns]
+                    # Append any other unexpected columns at the end
+                    ordered_cols += [c for c in pivot_game.columns if c not in ordered_cols]
+                    pivot_game = pivot_game[ordered_cols]
+
+                pivot_game.to_excel(writer, sheet_name=sheet_name, startrow=startrow_game)
 
             # -------- Per-category graph --------
             ws = writer.book[sheet_name]
@@ -148,16 +150,17 @@ def export_player_excel(df, player_name):
             per_game_rows = len(cat_df["game_name"].unique()) + 3 if "game_name" in cat_df.columns else 0
             startrow_chart = outcome_rows + per_game_rows + 5
 
-            # Graph in percentages
-            pivot_percent = (
-                cat_df.groupby(["game_name", "outcome"])
-                .size()
-                .reset_index(name="count")
-            )
+            pivot_percent = cat_df.groupby(["game_name", "outcome"]).size().reset_index(name="count")
             total_per_game = pivot_percent.groupby("game_name")["count"].sum().reset_index()
             pivot_percent = pivot_percent.merge(total_per_game, on="game_name", suffixes=("", "_total"))
             pivot_percent["percentage"] = (pivot_percent["count"] / pivot_percent["count_total"] * 100).round(1)
             pivot_percent = pivot_percent.pivot(index="game_name", columns="outcome", values="percentage").fillna(0)
+
+            # Order columns for graph
+            if category in OUTCOME_ORDER:
+                ordered_cols = [c for c in OUTCOME_ORDER[category] if c in pivot_percent.columns]
+                ordered_cols += [c for c in pivot_percent.columns if c not in ordered_cols]
+                pivot_percent = pivot_percent[ordered_cols]
 
             x_labels = list(pivot_percent.index)
             x = range(len(x_labels))
@@ -207,7 +210,6 @@ def export_player_excel(df, player_name):
                     })
 
         # -------- Summary Sheet --------
-        # Create separate table per category in summary
         summary_ws_row = 0
         wb = writer.book
         summary_sheet = wb.create_sheet("Summary")
@@ -217,6 +219,11 @@ def export_player_excel(df, player_name):
             if not cat_summary:
                 continue
             summary_df = pd.DataFrame(cat_summary)
+            # Add a total row per category
+            total_count = summary_df["Count"].sum()
+            total_percentage = 100.0
+            summary_df.loc[len(summary_df)] = ["TOTAL", "", total_count, total_percentage]
+
             summary_df.to_excel(writer, sheet_name="Summary", index=False, startrow=summary_ws_row)
             summary_ws_row += len(summary_df) + 3  # space between tables
 
@@ -228,6 +235,8 @@ def export_player_excel(df, player_name):
             file_name=f"{player_name}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
+
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
