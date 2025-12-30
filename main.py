@@ -99,16 +99,11 @@ def export_player_excel(df, player_name):
 
     output_path = f"/tmp/{player_name}_volleyball_report.xlsx"
 
-    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-
+    with ExcelWriter(output_path, engine="openpyxl") as writer:
         summary_rows = []
-
-        # Prepare overall summary data
-        overall_summary = []
 
         for category in sorted(player_df["category"].unique()):
             cat_df = player_df[player_df["category"] == category]
-            sheet_name = category[:31]
 
             # -------- Outcome statistics --------
             outcome_stats = (
@@ -121,94 +116,84 @@ def export_player_excel(df, player_name):
             outcome_stats["percentage"] = (outcome_stats["count"] / total * 100).round(1)
             outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total, 100.0]
 
-            outcome_stats.to_excel(writer, sheet_name=sheet_name, index=False, startrow=0)
-
-            # -------- Per-game table --------
-            if "game_name" in cat_df.columns:
-                game_stats = (
-                    cat_df.groupby(["game_name", "outcome"])
-                    .size()
-                    .reset_index(name="count")
-                )
-                pivot_game = game_stats.pivot(index="game_name", columns="outcome", values="count").fillna(0)
-                pivot_game.to_excel(writer, sheet_name=sheet_name, startrow=len(outcome_stats) + 3)
-
-            # -------- Per-category graph --------
-            ws = writer.book[sheet_name]
-
-            # Determine start row for chart
-            outcome_rows = len(outcome_stats) + 1
-            per_game_rows = len(cat_df["game_name"].unique()) + 3 if "game_name" in cat_df.columns else 0
-            startrow_chart = outcome_rows + per_game_rows + 5
-
-            # Prepare per-game percentage pivot
-            pivot_percent = (
-                cat_df.groupby(["game_name", "outcome"])
-                .size()
-                .reset_index(name="count")
+            # Write category sheet
+            outcome_stats.to_excel(
+                writer,
+                sheet_name=category[:31],
+                index=False,
+                startrow=0
             )
-            total_per_game = pivot_percent.groupby("game_name")["count"].sum().reset_index()
-            pivot_percent = pivot_percent.merge(total_per_game, on="game_name", suffixes=("", "_total"))
-            pivot_percent["percentage"] = (pivot_percent["count"] / pivot_percent["count_total"] * 100).round(1)
-            pivot_percent = pivot_percent.pivot(index="game_name", columns="outcome", values="percentage").fillna(0)
 
-            x_labels = list(pivot_percent.index)
-            x = range(len(x_labels))
+            # -------- Per-game progress --------
+            if "game_name" in cat_df.columns:
+                # Use ordered game numbers for the graph
+                game_order = {name: i+1 for i, name in enumerate(sorted(cat_df["game_name"].dropna().unique()))}
+                cat_df["game_num"] = cat_df["game_name"].map(game_order)
 
-            colors = plt.cm.tab10.colors
-            fig, ax = plt.subplots(figsize=(10, 4))
-            for i, outcome_col in enumerate(pivot_percent.columns):
-                y = pivot_percent[outcome_col].values
-                ax.plot(
-                    x, y, marker='o', label=outcome_col, color=colors[i % len(colors)]
+                # Pivot table for outcome counts per game
+                pivot_game = cat_df.pivot_table(
+                    index="game_num",
+                    columns="outcome",
+                    values="event",
+                    aggfunc="count",
+                    fill_value=0
                 )
-                for xi, yi in zip(x, y):
-                    ax.text(xi, yi + 0.5, f"{yi}%", ha='center', va='bottom', fontsize=8)
 
-            ax.set_title(f"{category} Performance (%)", fontsize=12)
-            ax.set_ylabel("Percentage (%)")
-            ax.set_ylim(0, 100)
-            ax.grid(True, linestyle='--', alpha=0.5)
-            ax.legend(title="Outcome", fontsize=8)
-            ax.set_xticks(range(len(x_labels)))
-            ax.set_xticklabels([f"Game {i+1}" for i in range(len(x_labels))], rotation=0)
-            plt.tight_layout()
+                # Calculate percentages per game
+                pivot_game_pct = pivot_game.div(pivot_game.sum(axis=1), axis=0) * 100
 
-            img_data = BytesIO()
-            plt.savefig(img_data, format="png", dpi=150)
-            plt.close(fig)
-            img_data.seek(0)
-            img = XLImage(img_data)
-            img.anchor = f"A{startrow_chart}"
-            ws.add_image(img)
+                # Write pivot table below outcome stats
+                pivot_game.to_excel(writer, sheet_name=category[:31], startrow=len(outcome_stats) + 3)
 
-            # Auto-fit columns
+                # Add percentage graph for this category
+                import matplotlib.pyplot as plt
+                import io
+                fig, ax = plt.subplots(figsize=(8, 4))
+                pivot_game_pct.plot(kind="bar", stacked=True, ax=ax)
+                ax.set_ylabel("Percentage (%)")
+                ax.set_xlabel("Game Number")
+                ax.set_title(f"{player_name} - {category} Performance (%)")
+                plt.legend(title="Outcome", bbox_to_anchor=(1.05, 1), loc="upper left")
+
+                # Save figure to a BytesIO buffer and add as image
+                imgdata = io.BytesIO()
+                fig.tight_layout()
+                fig.savefig(imgdata, format="png")
+                imgdata.seek(0)
+                from openpyxl.drawing.image import Image as ExcelImage
+                ws = writer.sheets[category[:31]]
+                img = ExcelImage(imgdata)
+                img.anchor = f"A{len(outcome_stats) + pivot_game.shape[0] + 6}"
+                ws.add_image(img)
+                plt.close(fig)
+
+            summary_rows.append((category, outcome_stats))
+
+        # -------- Summary Sheet with separate tables --------
+        from openpyxl.utils.dataframe import dataframe_to_rows
+        wb = writer.book
+        ws_summary = wb.create_sheet("Summary")
+
+        start_row = 1
+        for category, stats in summary_rows:
+            ws_summary.cell(row=start_row, column=1, value=f"Category: {category}")
+            start_row += 1
+
+            for r in dataframe_to_rows(stats, index=False, header=True):
+                for c_idx, val in enumerate(r, 1):
+                    ws_summary.cell(row=start_row, column=c_idx, value=val)
+                start_row += 1
+            start_row += 2  # empty row between categories
+
+        # Auto-fit column widths
+        for ws in writer.book.worksheets:
             for col in ws.columns:
                 max_length = 0
-                col_letter = get_column_letter(col[0].column)
+                column = col[0].column_letter
                 for cell in col:
                     if cell.value:
                         max_length = max(max_length, len(str(cell.value)))
-                ws.column_dimensions[col_letter].width = max_length + 2
-
-            summary_rows.append({
-                "Category": category,
-                "Total Events": total
-            })
-
-            # Collect overall summary
-            for _, row in outcome_stats.iterrows():
-                if row["outcome"] != "TOTAL":
-                    overall_summary.append({
-                        "Category": category,
-                        "Outcome": row["outcome"],
-                        "Count": row["count"],
-                        "Percentage": row["percentage"]
-                    })
-
-        # -------- Summary Sheet --------
-        summary_df = pd.DataFrame(overall_summary)
-        summary_df.to_excel(writer, sheet_name="Summary", index=False)
+                ws.column_dimensions[column].width = max_length + 2
 
     st.success("✅ Excel report created!")
     with open(output_path, "rb") as f:
@@ -218,7 +203,6 @@ def export_player_excel(df, player_name):
             file_name=f"{player_name}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
