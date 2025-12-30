@@ -139,18 +139,31 @@ def export_player_excel(df, player_name):
             pivot_game.to_excel(writer, sheet_name=category[:31], startrow=startrow)
 
             # -------- Add progress line graph --------
-            fig, ax = plt.subplots(figsize=(8, 4))
-            for outcome_col in pivot_game.columns:
-                ax.plot(pivot_game.index, pivot_game[outcome_col], marker='o', label=outcome_col)
-            ax.set_title(f"{category} - Progress over Games")
-            ax.set_ylabel("Count")
-            ax.set_xlabel("Game")
-            ax.legend()
+            fig, ax = plt.subplots(figsize=(10, 5))
+            colors = plt.cm.tab10.colors  # Distinct colors for up to 10 outcomes
+            for i, outcome_col in enumerate(pivot_game.columns):
+                ax.plot(
+                    pivot_game.index,
+                    pivot_game[outcome_col],
+                    marker='o',
+                    label=outcome_col,
+                    color=colors[i % len(colors)]
+                )
+                # Add data labels
+                for x, y in zip(pivot_game.index, pivot_game[outcome_col]):
+                    ax.text(x, y + 0.1, str(int(y)), ha='center', va='bottom', fontsize=8)
+
+            ax.set_title(f"{category} - Progress over Games", fontsize=14)
+            ax.set_ylabel("Count", fontsize=12)
+            ax.set_xlabel("Game", fontsize=12)
+            ax.grid(True, linestyle='--', alpha=0.5)
+            ax.legend(title="Outcome", fontsize=9)
             plt.xticks(rotation=0)
             plt.tight_layout()
 
+            # Save figure to Excel
             img_data = BytesIO()
-            plt.savefig(img_data, format="png")
+            plt.savefig(img_data, format="png", dpi=150)
             plt.close(fig)
             img_data.seek(0)
             img = XLImage(img_data)
@@ -172,7 +185,7 @@ def export_player_excel(df, player_name):
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
         auto_adjust_columns(writer, "Summary")
 
-    st.success("✅ Excel report created!")
+    st.success("✅ Excel report with graphs created!")
     with open(output_path, "rb") as f:
         st.download_button(
             "⬇️ Download Excel",
@@ -180,6 +193,8 @@ def export_player_excel(df, player_name):
             file_name=f"{player_name}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
+
 # ---------------- PLAYER SELECTION ----------------
 player = horizontal_radio("### 🏐 Select Player", 
     ["", "Ori", "Ofir", "Beni", "Hillel", "Shak", "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"], 
