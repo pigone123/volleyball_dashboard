@@ -46,13 +46,19 @@ if st.button("💾 Save Event"):
     else:
         st.error("Missing fields")
 
-st.divider()
-st.subheader("📤 Export Data")
-
 df = load_events()
 if not df.empty:
-    export_all_events_excel(df)
+    st.subheader("📋 Logged Events")
 
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
+
+    st.divider()
+    st.subheader("📤 Export Data")
+
+    export_all_events_excel(df)
 
     st.divider()
     st.subheader("📊 Player Statistics Export")
@@ -64,3 +70,5 @@ if not df.empty:
 
     if st.button("⬇️ Download Player Excel Report", use_container_width=True):
         export_player_excel(df, player_for_export)
+else:
+    st.info("No events logged yet.")
