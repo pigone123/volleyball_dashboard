@@ -168,3 +168,17 @@ def _download_excel(path, player):
             file_name=f"{player}_volleyball_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
+
+def export_all_events_excel(df):
+    output_path = "/tmp/volleyball_events.xlsx"
+    df.to_excel(output_path, index=False)
+
+    with open(output_path, "rb") as f:
+        st.download_button(
+            "⬇️ Download All Events (Excel)",
+            f,
+            file_name="volleyball_events.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
