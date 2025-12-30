@@ -103,11 +103,11 @@ def export_player_excel(df, player_name):
 
         summary_rows = []
 
-        # ------------------ Category Sheets ------------------
         for category in sorted(player_df["category"].unique()):
             cat_df = player_df[player_df["category"] == category]
+            sheet_name = category[:31]
 
-            # Outcome statistics (counts)
+            # -------- Outcome statistics --------
             outcome_stats = (
                 cat_df.groupby("outcome")
                 .size()
@@ -118,63 +118,27 @@ def export_player_excel(df, player_name):
             total = outcome_stats["count"].sum()
             outcome_stats.loc[len(outcome_stats)] = ["TOTAL", total]
 
-            outcome_stats.to_excel(
-                writer,
-                sheet_name=category[:31],
-                index=False,
-                startrow=0
-            )
+            outcome_stats.to_excel(writer, sheet_name=sheet_name, index=False, startrow=0)
 
-            # Per-game counts
+            # -------- Per-game table --------
             if "game_name" in cat_df.columns:
                 game_stats = (
                     cat_df.groupby(["game_name", "outcome"])
                     .size()
                     .reset_index(name="count")
                 )
+                pivot_game = game_stats.pivot(index="game_name", columns="outcome", values="count").fillna(0)
+                pivot_game.to_excel(writer, sheet_name=sheet_name, startrow=len(outcome_stats) + 3)
 
-                pivot_game = game_stats.pivot(
-                    index="game_name",
-                    columns="outcome",
-                    values="count"
-                ).fillna(0)
+            # -------- Per-category graph --------
+            ws = writer.book[sheet_name]
 
-                pivot_game.to_excel(
-                    writer,
-                    sheet_name=category[:31],
-                    startrow=len(outcome_stats) + 3
-                )
+            # Determine start row for chart
+            outcome_rows = len(outcome_stats) + 1  # +1 for TOTAL
+            per_game_rows = len(cat_df["game_name"].unique()) + 3 if "game_name" in cat_df.columns else 0
+            startrow_chart = outcome_rows + per_game_rows + 5
 
-            summary_rows.append({
-                "Category": category,
-                "Total Events": total
-            })
-
-        # ------------------ Summary Sheet ------------------
-        summary_df = pd.DataFrame(summary_rows)
-        summary_df.to_excel(writer, sheet_name="Summary", index=False)
-
-        # Auto-adjust columns width
-        workbook = writer.book
-        for sheet_name in workbook.sheetnames:
-            ws = workbook[sheet_name]
-            for column_cells in ws.columns:
-                length = max(len(str(cell.value) if cell.value is not None else "") for cell in column_cells)
-                ws.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 2
-
-        # ------------------ Summary Graphs ------------------
-        categories = sorted(player_df["category"].unique())
-        n_categories = len(categories)
-        fig, axes = plt.subplots(n_categories, 1, figsize=(12, 4 * n_categories), sharex=True)
-
-        if n_categories == 1:
-            axes = [axes]  # make iterable
-
-        colors = plt.cm.tab10.colors
-
-        for ax, category in zip(axes, categories):
-            cat_df = player_df[player_df["category"] == category]
-
+            # Prepare per-game percentage pivot
             pivot_percent = (
                 cat_df.groupby(["game_name", "outcome"])
                 .size()
@@ -188,6 +152,8 @@ def export_player_excel(df, player_name):
             x_labels = list(pivot_percent.index)
             x = range(len(x_labels))
 
+            colors = plt.cm.tab10.colors
+            fig, ax = plt.subplots(figsize=(10, 4))
             for i, outcome_col in enumerate(pivot_percent.columns):
                 y = pivot_percent[outcome_col].values
                 ax.plot(
@@ -196,26 +162,41 @@ def export_player_excel(df, player_name):
                 for xi, yi in zip(x, y):
                     ax.text(xi, yi + 0.5, f"{yi}%", ha='center', va='bottom', fontsize=8)
 
-            ax.set_title(f"{category} Performance (%)", fontsize=14)
-            ax.set_ylabel("Percentage (%)", fontsize=12)
+            ax.set_title(f"{category} Performance (%)", fontsize=12)
+            ax.set_ylabel("Percentage (%)")
             ax.set_ylim(0, 100)
             ax.grid(True, linestyle='--', alpha=0.5)
-            ax.legend(title="Outcome", fontsize=9)
+            ax.legend(title="Outcome", fontsize=8)
+            ax.set_xticks(range(len(x_labels)))
+            ax.set_xticklabels([f"Game {i+1}" for i in range(len(x_labels))], rotation=0)
+            plt.tight_layout()
 
-        axes[-1].set_xticks(range(len(x_labels)))
-        axes[-1].set_xticklabels([f"Game {i+1}" for i in range(len(x_labels))], rotation=0)
-        axes[-1].set_xlabel("Game", fontsize=12)
-        plt.tight_layout()
+            # Insert figure into Excel
+            img_data = BytesIO()
+            plt.savefig(img_data, format="png", dpi=150)
+            plt.close(fig)
+            img_data.seek(0)
+            img = XLImage(img_data)
+            img.anchor = f"A{startrow_chart}"
+            ws.add_image(img)
 
-        # Save figure to image and insert into Summary sheet
-        img_data = BytesIO()
-        plt.savefig(img_data, format="png", dpi=150)
-        plt.close(fig)
-        img_data.seek(0)
-        img = XLImage(img_data)
-        ws_summary = workbook["Summary"]
-        img.anchor = f"A{summary_df.shape[0] + 5}"
-        ws_summary.add_image(img)
+            # Auto-fit columns
+            for col in ws.columns:
+                max_length = 0
+                col_letter = get_column_letter(col[0].column)
+                for cell in col:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                ws.column_dimensions[col_letter].width = max_length + 2
+
+            summary_rows.append({
+                "Category": category,
+                "Total Events": total
+            })
+
+        # -------- Summary Sheet --------
+        summary_df = pd.DataFrame(summary_rows)
+        summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
     st.success("✅ Excel report created!")
     with open(output_path, "rb") as f:
