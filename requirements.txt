@@ -4,5 +4,4 @@ pandas
 requests
 gunicorn
 openpyxl
-io
 matplotlib
