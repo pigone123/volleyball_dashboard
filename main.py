@@ -117,10 +117,10 @@ if not df.empty:
     
     df = df.drop(columns=[col for col in ["id", "event_category", "created_at"] if col in df.columns])
     
-    preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes", "game_name"]
-    # Keep other columns at the end
-    remaining_cols = [c for c in df.columns if c not in preferred_order]
-    df = df[preferred_order + remaining_cols]
+    preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes"]
+    remaining_cols = [c for c in df.columns if c not in preferred_order and c != "id"]
+    
+    df = df[["id"] + preferred_order + remaining_cols]
 
     # ---------------- DATA EDITOR ----------------
     df_display = df.copy()
@@ -129,6 +129,10 @@ if not df.empty:
     edited_df = st.data_editor(
         df_display,
         disabled=["id"],
+        hide_index=True,
+        column_config={
+            "id": st.column_config.NumberColumn("id", disabled=True)
+        },
         num_rows="fixed",
         use_container_width=True,
         key="events_editor"
