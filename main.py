@@ -107,6 +107,7 @@ st.divider()
 st.subheader("📋 Logged Events")
 
 df = load_events()
+st.write("Loaded columns:", df.columns.tolist())
 
 if not df.empty:
     # Sort rows by timestamp or id
