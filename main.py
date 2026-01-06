@@ -114,6 +114,9 @@ if not df.empty:
     df = df.sort_values(sort_col, ascending=False)
 
     # ---------------- REORDER COLUMNS ----------------
+    if "event_category" in df.columns:
+        df = df.drop(columns=["event_category"])
+    
     preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes", "game_name"]
     # Keep other columns at the end
     remaining_cols = [c for c in df.columns if c not in preferred_order]
