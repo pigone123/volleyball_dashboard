@@ -115,7 +115,7 @@ if not df.empty:
 
     # ---------------- REORDER COLUMNS ----------------
     
-    df = df.drop(columns=[col for col in ["id", "event_category"] if col in df.columns])
+    df = df.drop(columns=[col for col in ["id", "event_category", "created_at"] if col in df.columns])
     
     preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes", "game_name"]
     # Keep other columns at the end
