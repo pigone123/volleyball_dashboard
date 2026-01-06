@@ -118,9 +118,11 @@ if not df.empty:
     df = df.drop(columns=[col for col in ["id", "event_category", "created_at"] if col in df.columns])
     
     preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes"]
-    remaining_cols = [c for c in df.columns if c not in preferred_order and c != "id"]
     
-    df = df[["id"] + preferred_order + remaining_cols]
+    existing_preferred = [c for c in preferred_order if c in df.columns]
+    remaining_cols = [c for c in df.columns if c not in existing_preferred and c != "id"]
+    
+    df = df[["id"] + existing_preferred + remaining_cols]
 
     # ---------------- DATA EDITOR ----------------
     df_display = df.copy()
