@@ -109,9 +109,17 @@ st.subheader("📋 Logged Events")
 df = load_events()
 
 if not df.empty:
+    # Sort rows by timestamp or id
     sort_col = "timestamp" if "timestamp" in df.columns else "id"
     df = df.sort_values(sort_col, ascending=False)
 
+    # ---------------- REORDER COLUMNS ----------------
+    preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes", "game_name"]
+    # Keep other columns at the end
+    remaining_cols = [c for c in df.columns if c not in preferred_order]
+    df = df[preferred_order + remaining_cols]
+
+    # ---------------- DATA EDITOR ----------------
     df_display = df.copy()
     df_display["Delete?"] = False
 
@@ -122,10 +130,7 @@ if not df.empty:
         use_container_width=True,
         key="events_editor"
     )
-    unknown = set(payload.keys()) - EXPECTED_COLUMNS
-    if unknown:
-        st.error(f"❌ Invalid DB columns: {unknown}")
-        st.stop()
+
     # ----- Save edits -----
     if st.button("💾 Save All Changes", use_container_width=True):
         for _, row in edited_df.iterrows():
@@ -138,12 +143,14 @@ if not df.empty:
             if changes:
                 update_event(row["id"], changes)
 
+        # Reset selections after saving
+        for key in ["selected_event", "selected_outcome", "attack_type", "set_to"]:
+            st.session_state[key] = ""
         st.success("✅ All changes saved!")
         st.rerun()
 
     # ----- Delete rows -----
     delete_ids = edited_df.loc[edited_df["Delete?"], "id"].tolist()
-
     if delete_ids:
         if st.button("🗑️ Delete Selected Rows", use_container_width=True):
             for row_id in delete_ids:
