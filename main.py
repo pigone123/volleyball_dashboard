@@ -107,7 +107,7 @@ st.divider()
 st.subheader("📋 Logged Events")
 
 df = load_events()
-st.write("Loaded columns:", df.columns.tolist())
+
 
 if not df.empty:
     # Sort rows by timestamp or id
@@ -115,15 +115,13 @@ if not df.empty:
     df = df.sort_values(sort_col, ascending=False)
 
     # ---------------- REORDER COLUMNS ----------------
-    
-    df = df.drop(columns=[col for col in ["id", "event_category", "created_at"] if col in df.columns])
-    
+       
     preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes"]
     
     existing_preferred = [c for c in preferred_order if c in df.columns]
     remaining_cols = [c for c in df.columns if c not in existing_preferred and c != "id"]
     
-    df = df[["id"] + existing_preferred + remaining_cols]
+    df = df.loc[:, ["id"] + existing_preferred + remaining_cols]
 
     # ---------------- DATA EDITOR ----------------
     df_display = df.copy()
