@@ -76,18 +76,25 @@ outcome = (
 # ---------------- SAVE EVENT ----------------
 if st.button("💾 Save Event", use_container_width=True):
     if player and event and outcome:
-        save_event({
+        success = save_event({
             "player": player,
-            "event_category": event,
+            "event": event,
             "attack_type": attack_type if event == "Attack" else None,
             "set_to": set_to if event == "Set" else None,
             "outcome": outcome,
             "game_name": st.session_state.game_name or "No Game Entered",
             "video_url": st.session_state.video_url
         })
-        st.success("✅ Event saved!")
+
+        if success:
+            st.success("✅ Event saved!")
+            st.rerun()
+        else:
+            st.error("❌ Failed to save event (Supabase error)")
     else:
         st.error("⚠️ Please select player, event and outcome")
+
+    
 
 # ---------------- LOGGED EVENTS ----------------
 st.divider()
