@@ -11,6 +11,12 @@ from services.export_service import (
     export_player_excel
 )
 
+
+EXPECTED_COLUMNS = {
+    "player", "event", "outcome", "game_name",
+    "video_url", "attack_type", "set_to"
+}
+
 # ---------------- PAGE SETUP ----------------
 setup_page()
 
@@ -116,7 +122,10 @@ if not df.empty:
         use_container_width=True,
         key="events_editor"
     )
-
+    unknown = set(payload.keys()) - EXPECTED_COLUMNS
+    if unknown:
+        st.error(f"❌ Invalid DB columns: {unknown}")
+        st.stop()
     # ----- Save edits -----
     if st.button("💾 Save All Changes", use_container_width=True):
         for _, row in edited_df.iterrows():
