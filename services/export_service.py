@@ -161,7 +161,11 @@ def _add_category_chart(writer, sheet, cat_df, category, startrow):
     ax.set_xticks(range(len(pivot.index)))
     ax.set_xticklabels([rtl(x) for x in pivot.index], rotation=30, ha="right")
 
-    ax.legend()
+    ax.legend(
+    loc="center left",
+    bbox_to_anchor=(1.02, 0.5),
+    borderaxespad=0
+    )
     plt.tight_layout()
 
     img = BytesIO()
@@ -233,6 +237,7 @@ def _write_summary_sheet(writer, rows):
             startrow=start
         )
         start += len(sub) + 3
+
 
 
 
