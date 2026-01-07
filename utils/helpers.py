@@ -1,5 +1,6 @@
 import streamlit as st
 import arabic_reshaper
+from bidi.algorithm import get_display
 
 def horizontal_radio(label, options, session_key):
     current = st.session_state.get(session_key, options[0])
@@ -19,3 +20,4 @@ def rtl(text):
     if not isinstance(text, str):
         return text
     return get_display(arabic_reshaper.reshape(text))
+
