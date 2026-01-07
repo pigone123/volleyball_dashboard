@@ -132,26 +132,26 @@ def _add_category_chart(writer, sheet, cat_df, category, startrow):
     fig, ax = plt.subplots(figsize=(10, 4))
 
     for col in pivot.columns:
-    y_values = pivot[col].values
-    x_values = range(len(pivot.index))
-
-    ax.plot(
-        x_values,
-        y_values,
-        marker="o",
-        label=rtl(col)
-    )
-
-    for x, y in zip(x_values, y_values):
-        if y > 0:
-            ax.text(
-                x,
-                y + 1.5,               # slightly above the point
-                f"{y}%",
-                ha="center",
-                va="bottom",
-                fontsize=8
-            )
+        y_values = pivot[col].values
+        x_values = range(len(pivot.index))
+    
+        ax.plot(
+            x_values,
+            y_values,
+            marker="o",
+            label=rtl(col)
+        )
+    
+        for x, y in zip(x_values, y_values):
+            if y > 0:
+                ax.text(
+                    x,
+                    y + 1.5,               # slightly above the point
+                    f"{y}%",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8
+                )
 
     ax.set_title(rtl(f"{category} ביצועים (%)"))  # ✅ FIX title
     ax.set_ylim(0, 100)
@@ -233,6 +233,7 @@ def _write_summary_sheet(writer, rows):
             startrow=start
         )
         start += len(sub) + 3
+
 
 
 
