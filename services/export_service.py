@@ -86,14 +86,21 @@ def _write_game_table(writer, sheet, cat_df, category, startrow):
     )
 
     pivot = game_stats.pivot(
-        index="game_name", columns="outcome", values="count"
+        index="game_name",
+        columns="outcome",
+        values="count"
     ).fillna(0)
 
+    # Order outcome columns if defined
     if category in OUTCOME_ORDER:
         ordered = [c for c in OUTCOME_ORDER[category] if c in pivot.columns]
         pivot = pivot[ordered + [c for c in pivot.columns if c not in ordered]]
 
+    # ✅ ADD TOTAL PER GAME
+    pivot["TOTAL"] = pivot.sum(axis=1)
+
     pivot.to_excel(writer, sheet_name=sheet, startrow=startrow)
+
 
 
 def _add_category_chart(writer, sheet, cat_df, category, startrow):
@@ -199,4 +206,5 @@ def _write_summary_sheet(writer, rows):
             startrow=start
         )
         start += len(sub) + 3
+
 
