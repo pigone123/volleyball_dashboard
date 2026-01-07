@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-
+from utils.helpers import rtl
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.utils import get_column_letter
 
@@ -104,6 +104,9 @@ def _write_game_table(writer, sheet, cat_df, category, startrow):
 
 
 def _add_category_chart(writer, sheet, cat_df, category, startrow):
+
+    plt.rcParams["font.family"] = "DejaVu Sans"  # Hebrew-safe font
+
     ws = writer.book[sheet]
 
     percent_df = (
@@ -127,13 +130,24 @@ def _add_category_chart(writer, sheet, cat_df, category, startrow):
         pivot = pivot[ordered + [c for c in pivot.columns if c not in ordered]]
 
     fig, ax = plt.subplots(figsize=(10, 4))
-    for col in pivot.columns:
-        ax.plot(pivot.index, pivot[col], marker="o", label=col)
 
-    ax.set_title(f"{category} Performance (%)")
+    for col in pivot.columns:
+        ax.plot(
+            pivot.index,
+            pivot[col],
+            marker="o",
+            label=rtl(col)   # ✅ FIX legend text
+        )
+
+    ax.set_title(rtl(f"{category} ביצועים (%)"))  # ✅ FIX title
     ax.set_ylim(0, 100)
-    ax.legend()
     ax.grid(True, linestyle="--", alpha=0.5)
+
+    # ✅ FIX X-axis labels (game names)
+    ax.set_xticks(range(len(pivot.index)))
+    ax.set_xticklabels([rtl(x) for x in pivot.index], rotation=30, ha="right")
+
+    ax.legend()
     plt.tight_layout()
 
     img = BytesIO()
@@ -144,7 +158,6 @@ def _add_category_chart(writer, sheet, cat_df, category, startrow):
     xl_img = XLImage(img)
     xl_img.anchor = f"A{startrow + len(pivot) + 5}"
     ws.add_image(xl_img)
-
 
 def _collect_summary_rows(category, stats):
     return [
@@ -206,5 +219,6 @@ def _write_summary_sheet(writer, rows):
             startrow=start
         )
         start += len(sub) + 3
+
 
 
