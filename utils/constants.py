@@ -5,7 +5,7 @@ EVENT_OUTCOMES = {
     "Receive": ["Perfect", "Good", "Neutral", "Bad", "Aced"],
     "Dig": ["Good", "Neutral", "Bad"],
     "Set": ["0 Blockers", "1 Blocker", "2 Blocker", "Overset"],
-    "Defense": ["Good", "Neutral", "Bad", "Overpass", "Failure"]
+    "Defense": ["Perfect", "Good", "Neutral", "Bad", "Overpass", "Failure"]
 }
 
 OUTCOME_ORDER = {
@@ -18,3 +18,4 @@ PLAYERS = [
     "", "Ori", "Ofir", "Beni", "Hillel", "Shak",
     "Omer Saar", "Omer", "Karat", "Lior", "Yonatan", "Ido", "Royi"
 ]
+
