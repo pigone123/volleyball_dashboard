@@ -29,7 +29,7 @@ if st.session_state.video_url:
 st.session_state.game_name = st.text_input("🏆 Enter Game Name")
 
 # ---------------- MAIN SELECTION ----------------
-st.session_state.set_number = st.selectbox(
+st.selectbox(
     "🎯 Set Number",
     ["", "1st Set", "2nd Set", "3rd Set", "4th Set", "5th Set"],
     key="set_number"
