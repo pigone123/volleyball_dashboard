@@ -124,7 +124,16 @@ if not df.empty:
 
     # ---------------- REORDER COLUMNS ----------------
        
-    preferred_order = ["player", "event", "attack_type", "outcome", "set_to", "notes"]
+    preferred_order = [
+    "player",
+    "event",
+    "attack_type",
+    "outcome",
+    "set_to",
+    "set_number",
+    "notes"
+    ]
+
     
     existing_preferred = [c for c in preferred_order if c in df.columns]
     remaining_cols = [c for c in df.columns if c not in existing_preferred and c != "id"]
