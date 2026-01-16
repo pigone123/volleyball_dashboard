@@ -65,7 +65,7 @@ elif event == "Set":
 base_outcomes = EVENT_OUTCOMES.get(event, [])
 
 # Reset outcome if attack type changes
-if event == "Attack":
+if event == "Attack" and attack_type:
     if st.session_state.get("last_attack_type") != attack_type:
         st.session_state.selected_outcome = ""
     st.session_state.last_attack_type = attack_type
