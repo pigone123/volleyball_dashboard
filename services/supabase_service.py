@@ -10,6 +10,8 @@ def save_event(data):
         headers=HEADERS,
         data=json.dumps(data)
     )
+    if r.status_code not in (200, 201):
+        st.error(res.text)
     return r
 
 def load_events():
@@ -34,3 +36,4 @@ def delete_event(row_id):
         f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}",
         headers=HEADERS
     )
+
