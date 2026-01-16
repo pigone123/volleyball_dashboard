@@ -87,7 +87,7 @@ outcome = (
 
 # ---------------- SAVE EVENT ----------------
 if st.button("💾 Save Event", use_container_width=True):
-        missing = []
+    missing = []
     if not player:
         missing.append("player")
     if not event:
