@@ -87,7 +87,17 @@ outcome = (
 
 # ---------------- SAVE EVENT ----------------
 if st.button("💾 Save Event", use_container_width=True):
-    if player and event and outcome:
+        missing = []
+    if not player:
+        missing.append("player")
+    if not event:
+        missing.append("event")
+    if not outcome:
+        missing.append("outcome")
+
+    if missing:
+        st.warning(f"Missing: {', '.join(missing)}")
+    elif player and event and outcome:
         success = save_event({
             "player": player,
             "event": event,
