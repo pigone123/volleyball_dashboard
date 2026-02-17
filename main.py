@@ -126,6 +126,9 @@ st.divider()
 st.subheader("📋 Logged Events")
 
 df = load_events()
+for col in EXPECTED_COLUMNS:
+    if col not in df.columns:
+        df[col] = None
 
 
 if not df.empty:
