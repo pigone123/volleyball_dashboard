@@ -14,22 +14,36 @@ def save_event(data):
         st.error(res.text)
     return r
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def load_events():
-    url = f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?select=*&order=id.desc"
+    all_rows = []
+    start = 0
+    batch_size = 1000
 
-    headers = {
-        **HEADERS,
-        "Range": "0-9999"   # ← increase limit
-    }
+    while True:
+        headers = {
+            **HEADERS,
+            "Range": f"{start}-{start + batch_size - 1}"
+        }
 
-    r = requests.get(url, headers=headers)
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?select=*&order=id.desc",
+            headers=headers
+        )
 
-    if r.status_code == 200:
-        return pd.DataFrame(r.json())
+        if r.status_code != 200:
+            st.error(r.text)
+            break
 
-    st.error(r.text)
-    return pd.DataFrame()
+        data = r.json()
+        if not data:
+            break
+
+        all_rows.extend(data)
+        start += batch_size
+
+    return pd.DataFrame(all_rows)
+
 
 def update_event(row_id, updated_data):
     requests.patch(
@@ -43,6 +57,7 @@ def delete_event(row_id):
         f"{SUPABASE_URL}/rest/v1/{TABLE_NAME}?id=eq.{row_id}",
         headers=HEADERS
     )
+
 
 
 
