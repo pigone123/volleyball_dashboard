@@ -164,7 +164,7 @@ if not df.empty:
         },
         num_rows="fixed",
         use_container_width=True,
-        key=f"events_editor_{len(df)}
+        key="events_editor"
     )
 
     # ----- Save edits -----
