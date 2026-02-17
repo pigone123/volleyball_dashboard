@@ -111,7 +111,6 @@ if st.button("💾 Save Event", use_container_width=True):
 
 
         if success:
-            load_events.clear()
             st.success("✅ Event saved!")
             st.rerun()
         else:
@@ -185,7 +184,7 @@ if not df.empty:
         # Reset selections after saving
         for key in ["selected_event", "selected_outcome", "attack_type", "set_to"]:
             st.session_state[key] = ""
-        load_events.clear()
+
         st.success("✅ All changes saved!")
         st.rerun()
 
@@ -195,7 +194,7 @@ if not df.empty:
         if st.button("🗑️ Delete Selected Rows", use_container_width=True):
             for row_id in delete_ids:
                 delete_event(row_id)
-            load_events.clear()
+
             st.success("🗑️ Rows deleted")
             st.rerun()
 
