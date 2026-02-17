@@ -97,7 +97,7 @@ if st.button("💾 Save Event", use_container_width=True):
 
     if missing:
         st.warning(f"Missing: {', '.join(missing)}")
-    elif player and event and outcome:
+    else:
         success = save_event({
             "player": player,
             "event": event,
@@ -109,26 +109,24 @@ if st.button("💾 Save Event", use_container_width=True):
             "video_url": st.session_state.video_url
         })
 
-
         if success:
             st.success("✅ Event saved!")
+            # Mark DataFrame to reload on next run
+            st.session_state.reload_events = True
             st.rerun()
         else:
             st.error("❌ Failed to save event (Supabase error)")
-    else:
-        st.error("⚠️ Please select player, event and outcome")
-
-    
 
 # ---------------- LOGGED EVENTS ----------------
 st.divider()
 st.subheader("📋 Logged Events")
 
-df = load_events()
-for col in EXPECTED_COLUMNS:
-    if col not in df.columns:
-        df[col] = None
+# Load events into session_state if not already loaded or if refresh is needed
+if "df_events" not in st.session_state or st.session_state.get("reload_events", False):
+    st.session_state.df_events = load_events()
+    st.session_state.reload_events = False
 
+df = st.session_state.df_events
 
 if not df.empty:
     # Sort rows by timestamp or id
@@ -136,21 +134,18 @@ if not df.empty:
     df = df.sort_values(sort_col, ascending=False)
 
     # ---------------- REORDER COLUMNS ----------------
-       
     preferred_order = [
-    "player",
-    "event",
-    "attack_type",
-    "outcome",
-    "set_to",
-    "set_number",
-    "notes"
+        "player",
+        "event",
+        "attack_type",
+        "outcome",
+        "set_to",
+        "set_number",
+        "notes"
     ]
 
-    
     existing_preferred = [c for c in preferred_order if c in df.columns]
     remaining_cols = [c for c in df.columns if c not in existing_preferred and c != "id"]
-    
     df = df.loc[:, ["id"] + existing_preferred + remaining_cols]
 
     # ---------------- DATA EDITOR ----------------
@@ -166,7 +161,7 @@ if not df.empty:
         },
         num_rows="fixed",
         use_container_width=True,
-        key="events_editor"
+        key=f"events_editor_{len(df)}"
     )
 
     # ----- Save edits -----
@@ -181,11 +176,9 @@ if not df.empty:
             if changes:
                 update_event(row["id"], changes)
 
-        # Reset selections after saving
-        for key in ["selected_event", "selected_outcome", "attack_type", "set_to"]:
-            st.session_state[key] = ""
-
-        st.success("✅ All changes saved!")
+        st.success("✅ All edits saved!")
+        # Mark to reload fresh data
+        st.session_state.reload_events = True
         st.rerun()
 
     # ----- Delete rows -----
@@ -194,8 +187,8 @@ if not df.empty:
         if st.button("🗑️ Delete Selected Rows", use_container_width=True):
             for row_id in delete_ids:
                 delete_event(row_id)
-
             st.success("🗑️ Rows deleted")
+            st.session_state.reload_events = True
             st.rerun()
 
     # ---------------- EXPORTS ----------------
@@ -205,7 +198,6 @@ if not df.empty:
 
     st.divider()
     st.subheader("📊 Player Statistics Export")
-
     player_for_export = st.selectbox(
         "Select player",
         sorted(df["player"].dropna().unique())
@@ -216,3 +208,4 @@ if not df.empty:
 
 else:
     st.info("No events logged yet.")
+
